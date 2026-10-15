@@ -22,14 +22,16 @@ claude --plugin-dir <path to your cv-kit checkout>
 | Component | Name | What it does |
 |---|---|---|
 | Skill | `cv-brainstorm` | Use when a computer-vision task or project is new or underspecified, before choosing a model or writing code, including when such a task should be split across subagents. |
-| Skill | `cv-deep-research` | Use when the user must choose or customize a computer-vision model, backbone, head or loss and needs evidence with citations, or asks for SOTA, a literature comparison or a design recommendation backed by papers. |
+| Skill | `cv-deep-research` | Use when the user must choose or customize a computer-vision model, backbone, head or loss and needs evidence with citations, asks for SOTA, a literature comparison or a design recommendation backed by papers, or asks whether one benchmark claim from a paper, README or model card is right. |
 | Skill | `cv-model-selection` | Use when choosing a detector, segmenter, keypoint model, image encoder or VLM for a stated task, budget and licence, or when asked which model to start from. |
 | Skill | `cv-embeddings-retrieval` | Use when computing image or text embeddings with CLIP, OpenCLIP, SigLIP, SigLIP2, DINOv2 or DINOv3, or building zero-shot classification, image-text retrieval, image similarity search or linear probes. |
-| Skill | `ai-workflow-figure` | Use when drawing a hand-drawn workflow, architecture or pipeline figure of an AI or computer-vision model or system (high-level, low-level, system pipeline, or the whole model in numbered module panels), annotating or translating such a figure, or rebuilding one with another font. |
+| Skill | `ai-workflow-figure` | Use when drawing a hand-drawn workflow, architecture, block or pipeline diagram of an AI or computer-vision model or system for docs, a paper or slides (high-level, low-level, system pipeline, the whole model in numbered module panels, or what changed between two versions of a model), annotating, translating or exporting such a figure, or rebuilding one with another font. |
 | Skill | `commit-vcs` | Use when about to commit with git or SVN, writing or rewording a commit message, or asked what a commit should say. |
 | Skill | `install-rules` | Copies cv-kit's rules into the current project (see Rules). Only you can invoke it, as `/cv-kit:install-rules`. |
-| Agent | `cv-reviewer` | Read-only reviewer for CV code and configs: split leakage, wrong normalisation, licence problems and unpinned weights. |
+| Agent | `cv-reviewer` | Read-only reviewer for CV code, configs and evaluation reports: split leakage, wrong normalisation, licence problems, unpinned weights and numbers the runs do not support. Findings carry a severity and an anchor; a re-review gives each earlier finding a verdict. |
 | Agent | `model-scout` | Researches exactly one candidate model or method and returns a structured evidence file; the deep-research workflow dispatches one per candidate. |
+| Agent | `claim-verifier` | Re-opens every source and locator in a research ledger and copies what it says, without seeing the scouts' values; the lint then marks each claim `confirmed` or `differs`. The deep-research workflow dispatches one after the scouts. |
+| Script | `scripts/lint_research.py` | Lints a research claims ledger (fields per claim kind, one pinned source, the value in its verbatim quote, the quote in the saved copy of the page), writes the blind ledger for the verifier, merges its checks, and checks the report's comparison table and claim tags against the ledger. |
 | Hook | `hooks/block_trailers.py` | A `PreToolUse` hook on the Bash tool that refuses a `git commit` or `svn commit` whose message carries a trailer (see Commit hook). |
 | Shared references | `shared/catalog.md`, `licenses.md`, `metrics.md`, `sources.md` | The model catalog, a licence-family summary, metric definitions and the reachability of research sources. The skills read these. |
 
@@ -40,6 +42,8 @@ Planned for v0.2: dataset prep, auto-labelling, finetuning, evaluation, export, 
 ## Figures
 
 `ai-workflow-figure` needs Python 3.10 or later and Chrome or Chromium for its layout check and PNG; set `CHROME` to the browser binary if it is not on PATH as `google-chrome` or `chromium`. A snap-packaged Chromium cannot read or write `/tmp`, `/mnt` or hidden folders. The default font, Patrick Hand, is bundled with every Vietnamese letter, so builds work offline. The optional Stay With Me font is free for personal use only; `scripts/fetch_fonts.py` in the skill downloads it to `~/.cache/ai-workflow-figure/fonts/`, never into a repository.
+
+`check_figure.py` also exports the figure alone for a paper or slide: `--bare` drops the page title, `--scale 2` doubles the PNG's pixels, and `--svg` writes a standalone SVG that carries its font. The SVG embeds the font file as the HTML does, so with Stay With Me share neither.
 
 ## Rules
 
@@ -104,7 +108,9 @@ claude plugin validate skills --strict
 claude plugin validate agents --strict
 ```
 
-`scripts/validate_plugin.py` checks house rules that `claude plugin validate` does not. The four `claude plugin validate` calls are separate because the root call checks only the marketplace.
+`scripts/validate_plugin.py` checks house rules that `claude plugin validate` does not, including that the component table above lists every skill and agent, that the catalog counts above match `shared/catalog.md`, and that every agent that can fetch or run commands says fetched content is data, not instructions. The four `claude plugin validate` calls are separate because the root call checks only the marketplace.
+
+`evals/` holds a trigger eval suite for `claude plugin eval`. It is not run in CI: each run is a billed model call. Run it by hand before a release as `evals/README.md` describes. `tests/test_evals.py` checks its files offline.
 
 ## Licence
 
