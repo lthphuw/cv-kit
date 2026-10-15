@@ -1,6 +1,6 @@
 # cv-kit
 
-cv-kit is a Claude Code plugin for computer-vision engineers. It helps you scope a CV task before writing code, choose a model against a stated task, budget and licence, build embedding and retrieval pipelines, back a model decision with sourced papers, and keep git and SVN commits free of trailers. The model catalog it reads from records, for every row, whether its ids and licence were checked (`verified`) or not (`UNVERIFIED`).
+cv-kit is a Claude Code plugin for computer-vision engineers. It helps you scope a CV task before writing code, choose a model against a stated task, budget and licence, build embedding and retrieval pipelines, back a model decision with sourced papers, draw hand-drawn architecture figures of a model read from its code, and keep git and SVN commits free of trailers. The model catalog it reads from records, for every row, whether its ids and licence were checked (`verified`) or not (`UNVERIFIED`).
 
 ## Install
 
@@ -25,6 +25,7 @@ claude --plugin-dir <path to your cv-kit checkout>
 | Skill | `cv-deep-research` | Use when the user must choose or customize a computer-vision model, backbone, head or loss and needs evidence with citations, or asks for SOTA, a literature comparison or a design recommendation backed by papers. |
 | Skill | `cv-model-selection` | Use when choosing a detector, segmenter, keypoint model, image encoder or VLM for a stated task, budget and licence, or when asked which model to start from. |
 | Skill | `cv-embeddings-retrieval` | Use when computing image or text embeddings with CLIP, OpenCLIP, SigLIP, SigLIP2, DINOv2 or DINOv3, or building zero-shot classification, image-text retrieval, image similarity search or linear probes. |
+| Skill | `ai-workflow-figure` | Use when drawing a hand-drawn workflow, architecture or pipeline figure of an AI or computer-vision model or system (high-level, low-level, system pipeline, or the whole model in numbered module panels), annotating or translating such a figure, or rebuilding one with another font. |
 | Skill | `commit-vcs` | Use when about to commit with git or SVN, writing or rewording a commit message, or asked what a commit should say. |
 | Skill | `install-rules` | Copies cv-kit's rules into the current project (see Rules). Only you can invoke it, as `/cv-kit:install-rules`. |
 | Agent | `cv-reviewer` | Read-only reviewer for CV code and configs: split leakage, wrong normalisation, licence problems and unpinned weights. |
@@ -35,6 +36,10 @@ claude --plugin-dir <path to your cv-kit checkout>
 The catalog (`shared/catalog.md`) has 64 rows. 38 are marked `verified` and 26 are marked `UNVERIFIED`; the file explains what each status means. Treat an `UNVERIFIED` row as a lead to check, not as a fact. A gotcha that starts with `(experience)` is untested engineering knowledge, not a measurement.
 
 Planned for v0.2: dataset prep, auto-labelling, finetuning, evaluation, export, VLM usage, tracking, depth/pose/OCR.
+
+## Figures
+
+`ai-workflow-figure` needs Python 3.10 or later and Chrome or Chromium for its layout check and PNG; set `CHROME` to the browser binary if it is not on PATH as `google-chrome` or `chromium`. A snap-packaged Chromium cannot read or write `/tmp`, `/mnt` or hidden folders. The default font, Patrick Hand, is bundled with every Vietnamese letter, so builds work offline. The optional Stay With Me font is free for personal use only; `scripts/fetch_fonts.py` in the skill downloads it to `~/.cache/ai-workflow-figure/fonts/`, never into a repository.
 
 ## Rules
 
@@ -104,3 +109,5 @@ claude plugin validate agents --strict
 ## Licence
 
 cv-kit is released under the MIT licence (see `LICENSE`). The catalog records the licences of the third-party models it lists, and those differ: some are permissive, some are non-commercial or copyleft, and some are gated or custom. Check the licence of a model before you use it; the `Licence` column of `shared/catalog.md` and `shared/licenses.md` are the starting point.
+
+The figure skill bundles two third-party files under their own licences: rough.js 4.6.6 (MIT, `skills/ai-workflow-figure/assets/LICENSE-roughjs.txt`) and the Patrick Hand font (SIL OFL 1.1, `skills/ai-workflow-figure/assets/fonts/OFL-PatrickHand.txt`).
