@@ -23,3 +23,20 @@ jobs:
       - run: claude plugin validate .claude-plugin/plugin.json --strict
       - run: claude plugin validate skills --strict
       - run: claude plugin validate agents --strict
+      # Every template as a PNG, to look at in a pull request without building it locally.
+      - name: Render figure templates
+        if: always()
+        run: |
+          mkdir -p figure-templates
+          for spec in skills/ai-workflow-figure/templates/*.figure.js; do
+            name=$(basename "$spec" .figure.js)
+            python skills/ai-workflow-figure/scripts/build_figure.py "$spec" "figure-templates/$name.html"
+            python skills/ai-workflow-figure/scripts/check_figure.py "figure-templates/$name.html" \
+              --png "figure-templates/$name.png"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: figure-templates
+          path: figure-templates/*.png
+          retention-days: 14
