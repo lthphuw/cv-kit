@@ -16,6 +16,9 @@
   .sub { font-size: 21px; color: #5a5a5a; margin: 2px 0 10px; }
   svg { width: 100%; height: auto; display: block; }
   svg text { font-family: "__FONT_FAMILY__", "Comic Sans MS", cursive; fill: #2b2b2b; }
+  /* ?bare (check_figure.py --bare): the figure alone, edge to edge, for a paper or a slide. */
+  html.bare .wrap { max-width: none; padding: 0; }
+  html.bare h1, html.bare .sub { display: none; }
 </style>
 </head>
 <body>
@@ -37,6 +40,9 @@
   // Whatever stops the spec (a syntax error leaves FIGURE undefined, a typo in a kind or a
   // helper not destructured throws in draw) goes into the layout report, not only the console.
   let drawError = null;
+  if (new URLSearchParams(location.search).has("bare")) {
+    document.documentElement.classList.add("bare");
+  }
   try {
     // A translated edition sets FIGURE.lang (for example "vi") for screen readers and hyphenation.
     document.documentElement.lang = FIGURE.lang || "en";
@@ -45,6 +51,13 @@
     document.querySelector(".sub").textContent = FIGURE.subtitle;
     svg.setAttribute("aria-label", FIGURE.title);
     svg.setAttribute("viewBox", "0 0 " + FIGURE.width + " " + FIGURE.height);
+    // The title and the subtitle as the SVG's first children: they name it for screen readers,
+    // and they travel with an exported SVG.
+    for (const [tag, str] of [["title", FIGURE.title], ["desc", FIGURE.subtitle]]) {
+      const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      node.textContent = str || "";
+      svg.appendChild(node);
+    }
     FIGURE.draw(kit);
   } catch (error) {
     drawError = String(error);

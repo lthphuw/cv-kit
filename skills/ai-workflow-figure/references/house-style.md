@@ -52,6 +52,18 @@ helpers (`module`, `cbox`, `frost`, `fire`). Keep every rule below.
   | fusion or combiner | `merge` |
   | detection output, export or slim build | `box` |
   | schedule or stages | `cascade` |
+  | camera or video input | `camera`, `video` |
+  | text encoder, prompt or captions | `text` |
+  | embedding or projection head | `embed` |
+  | segmentation head | `mask` |
+  | pose or keypoint head | `keypoints` |
+  | depth head, 3D lifting | `depth` |
+  | tracker, association | `track` |
+  | crop, resize, region of interest | `crop` |
+  | serving, accelerator | `gpu` |
+
+- When no icon fits, use the nearest one and say so in the final message, or add an icon to the kit in the
+  cv-kit repository. Never give one icon two meanings in one figure.
 
 - Frozen boxes get the snowflake and boxes with learned weights get the flame. Place them with `frost(b)` and
   `fire(b)`, which use a fixed corner offset, never by hand.
@@ -109,6 +121,26 @@ the bottom of the figure.
   and grow each panel by its notes.
 - Build the annotated edition beside the plain one (`<name>.notes.figure.js` or `<name>.vi.figure.js`); the plain
   figure stays as it is.
+
+## Delta figures
+
+`templates/delta.figure.js` shows what changed between two versions of one model. The layout follows the
+architecture-delta type of cathrynlavery/diagram-design (MIT): before, the numbered changes, after.
+
+- Before sits at x 40 to 700, the changes at 740 to 1020, after at 1060 to 1720. Parts read top to bottom.
+- Both sides are drawn from one `PARTS` list, so a part has the same place and the same name on both sides. A
+  part that exists on one side only leaves its slot empty on the other.
+- The change list is computed from `PARTS` and `EDGES`, never typed: only after is ADDED, only before is
+  REMOVED, a different kind or different lines is CHANGED, different inputs is REWIRED. An added or removed part
+  between two kept parts is its own change, not a rewire of its neighbours.
+- A CHANGED part carries a short `change` line (`fine-tuned -> frozen`); the figure stops with an error without it.
+- Each changed part carries a mark in its top-left corner: `+` added, `-` removed, `~` changed or rewired, with
+  the number of its line in the change list. Never mark a removed part with a dashed outline: dashed means
+  training only.
+- Kind colours keep their meaning on both sides.
+- A setting that changed without changing a part (learning rate, epochs) goes in the settings card.
+- Read each side's facts from its own revision, and name both revisions in the header and the panel subtitles.
+- Budget: 8 parts and 10 connectors per side. Over it, make one delta figure per module.
 
 ## Translated edition
 

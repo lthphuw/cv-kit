@@ -74,8 +74,25 @@ A figure that needs a helper the kit lacks defines it inside its own `draw()`, b
 
 - Icons are drawn with the same rough.js settings as the boxes (roughness 0.6, stroke 2), so they match the figure.
   Names: `window`, `global`, `attention`, `grid`, `image`, `norm`, `mlp`, `conv`, `merge`, `stack`, `target`,
-  `box`, `query`, `loss`, `cascade`, plus the kind marks `trained`, `frozen`, `plain`, `dashed`. Build
-  `templates/icon-sheet.figure.js` to see them all.
+  `box`, `query`, `loss`, `cascade`, plus the kind marks `trained`, `frozen`, `plain`, `dashed`, then the
+  computer-vision icons below. Build `templates/icon-sheet.figure.js` to see them all.
+- Computer-vision icons, one meaning each:
+
+  | Icon | Stands for |
+  | --- | --- |
+  | `camera` | camera or sensor input |
+  | `video` | a video clip, frames over time |
+  | `mask` | a segmentation mask or head |
+  | `keypoints` | pose or landmarks |
+  | `depth` | depth or 3D |
+  | `gpu` | an accelerator, serving hardware |
+  | `text` | a text prompt, tokenizer or captions |
+  | `embed` | an embedding vector or projection |
+  | `crop` | a crop, resize or region of interest |
+  | `track` | tracking, association over frames |
+
+- A new icon goes at the end of `ICON_DRAW` in `figure-kit.js`. The icon sheet draws the icons in that order, so
+  one inserted earlier changes the strokes of every later cell; a figure that does not call it is unchanged.
 - Use `s` 0.5 for marks inside a box, 0.8 to 1.0 for panel titles.
 - Photos are drawn as the `image` icon. The kit does not embed real images.
 - Module colour is a tint on the panel background, passed as `{ fill }` in the style argument. The kind keeps its
@@ -96,6 +113,21 @@ A figure that needs a helper the kit lacks defines it inside its own `draw()`, b
 - Bold is synthesised from the regular face.
 - Pass `--font` explicitly in a spec's build command when the figure does not use the default.
 
+## Export
+
+`check_figure.py` writes the files a document needs from the built page:
+
+- `--png OUT.png`: a screenshot as tall as the page. `--bare` leaves out the page title and subtitle and the
+  margins (the page reads `?bare` and hides them), so the PNG is the figure alone. `--scale N` (1 to 4) multiplies
+  the pixels: at the default 1800 px window, `--scale 2` gives a PNG 3600 px wide.
+- `--svg OUT.svg`: the drawn `<svg>` as a standalone file. It adds the SVG namespace, a width and height from the
+  viewBox, the figure's `@font-face` and text style, and a background in the page colour. Its first children are
+  `<title>` (the figure title) and `<desc>` (the subtitle), which the page also uses as the figure's accessible
+  name and description. The file is checked to be well-formed XML before it is written.
+
+The SVG and the HTML embed the same font file. `check_figure.py` prints a note when the font is not the bundled
+Patrick Hand, whose OFL terms allow embedding it in a document; Stay With Me is for personal use only.
+
 ## What the layout check covers
 
 `check_figure.py` waits for the font, then reports:
@@ -104,17 +136,29 @@ A figure that needs a helper the kit lacks defines it inside its own `draw()`, b
 - text that overlaps other text: lines whose ink bands meet (0.75 em above, 0.25 em below the baseline; the full
   font box is about 1.3 em tall and would flag lines that look clear), or two letters whose own ink meets, such
   as a Vietnamese capital with stacked marks (about 1 em tall) under a `g`;
+- text that runs into a box or panel whose area does not hold its anchor point, such as a gutter label that
+  reaches a box, or a panel title that reaches a child box;
+- a box that crosses the edge of another box or panel instead of sitting inside it or clear of it, such as a
+  panel too short for its contents;
+- a filled panel drawn after a box, text or connector it covers (a `dashed` panel has no fill);
 - a connector through the interior of a box (not a panel);
 - a connector through text, in a panel or in a gutter;
+- a connector segment that is not horizontal or vertical;
+- two connectors that run side by side less than 30 apart (one lane each), except connectors that share their
+  first point (a fan-out bus) or their last point (a merge);
+- a connector that runs along the edge of a box or panel, where its stroke hides;
 - a box, text or connector point outside the canvas (`width` x `height`);
 - the font not loaded (the figure would use a fallback face);
 - an error that stopped `draw()`.
 
 Text bands for the box, canvas and connector checks are the fixed band stretched to the line's own ink.
 
-It does not cover: connector-on-connector overlap, lanes closer than 30, a panel hiding boxes drawn before it,
-arrow head direction, icons, a single glyph that fell back to another font, or whether the figure reads well. Look
-at the PNG for those.
+The label, containment and lane rules follow the geometry checks of cathrynlavery/diagram-design (MIT), which
+turns layout rules from prose into checks (its ADR 0005). Each rule has a case that must be reported and a twin
+that must not in `tests/test_ai_workflow_figure.py`; a new rule needs both.
+
+It does not cover: arrow head direction, icons and kind marks, a single glyph that fell back to another font, or
+whether the figure reads well. Look at the PNG for those.
 
 ## Style references
 
@@ -133,8 +177,11 @@ existing figures, so each is a separate decision.
 
 The kit is shared by every figure, and the plugin copy is replaced on each update, so change it only in the
 cv-kit repository. A change must be additive: build every template before and after it and compare the `<svg>`
-of each page (dump it with headless Chrome `--dump-dom`). Identical SVG means existing figures are unchanged.
+of each page (dump it with headless Chrome `--dump-dom`). Identical SVG means existing figures are unchanged; the
+`<title>` and `<desc>` the page adds hold the spec's own title and subtitle, so only the strokes after them count.
 Draw order fixes the rough.js seeds, so a helper that draws in a different order changes every stroke after it.
-`tests/test_ai_workflow_figure.py` builds and checks every template.
+`tests/test_ai_workflow_figure.py` builds and checks every template, and compares each template's drawn SVG with
+the digest in `tests/golden/figure-svg.json`. A change meant to alter a template (a new icon on the icon sheet)
+refreshes the file with `UPDATE_GOLDEN=1` and says why in the commit.
 
 `check_figure.py` keeps Chrome's sandbox on, except as root (Chrome will not start with it) or when `CI` is set.

@@ -25,6 +25,8 @@ function createFigureKit(svg, rc) {
   const ARROW_LEN = 14;
   const ARROW_HALF = 7;
   const STORE_LID = 24;
+  // Two connectors that run side by side keep at least this far apart (one lane each).
+  const LANE_GAP = 30;
   // A connector may run along a box edge; the crossing check ignores this much of it.
   const EDGE_TOLERANCE = 2;
   // Text closer than this to its box edge counts as overflowing.
@@ -43,10 +45,12 @@ function createFigureKit(svg, rc) {
     return seed;
   }
 
-  // Kept so finish() can check the layout once the font has loaded.
+  // Kept so finish() can check the layout once the font has loaded. order counts what was drawn
+  // first, so a panel that covers earlier parts can be found; it never touches a seed.
   const shapes = [];
   const texts = [];
   const connectors = [];
+  let order = 0;
 
   // A missing argument or a misspelt field (b.middle) is NaN by the time it is drawn, and NaN
   // compares false, so every layout check would pass it. Stop the drawing with its name instead.
@@ -75,7 +79,7 @@ function createFigureKit(svg, rc) {
     }
     const b = { x, y, w, h, left: x, right: x + w, top: y, bottom: y + h,
                 mid: y + h / 2, cx: x + w / 2,
-                name: name || "box at " + x + "," + y, container };
+                name: name || "box at " + x + "," + y, container, fill, order: order++ };
     shapes.push(b);
     return b;
   }
@@ -100,7 +104,7 @@ function createFigureKit(svg, rc) {
     if (bold) { t.setAttribute("font-weight", "700"); }
     t.textContent = str;
     svg.appendChild(t);
-    texts.push({ el: t, x, y, size, str });
+    texts.push({ el: t, x, y, size, str, order: order++ });
   }
   function label(x, y, str, size, bold) { text(x, y, str, size, bold, "middle"); }
   function left(x, y, str, size) { text(x, y, str, size, false, null); }
@@ -250,7 +254,7 @@ function createFigureKit(svg, rc) {
     if (points.length < 2) {
       throw new Error("a connector needs two distinct points");
     }
-    connectors.push(points);
+    connectors.push({ points, order: order++ });
     const opts = { roughness: 0.5, bowing: 0.3, strokeWidth: 2.4, stroke, seed: nextSeed() };
     if (dash) { opts.strokeLineDash = dash; }
     svg.appendChild(rc.path(roundedPath(points), opts));
@@ -265,18 +269,23 @@ function createFigureKit(svg, rc) {
   // From a note's edge to the part it explains, in the note's colour and dashed.
   function pointer(points) { run(points, false, POINTER.stroke, POINTER.dash); }
 
+  function holds(s, x, y) { return x >= s.left && x <= s.right && y >= s.top && y <= s.bottom; }
   // Smallest shape whose area holds the point; the text it anchors belongs to it.
   function ownerAt(x, y) {
     let owner = null;
     for (const s of shapes) {
-      const inside = x >= s.left && x <= s.right && y >= s.top && y <= s.bottom;
-      if (inside && (!owner || s.w * s.h < owner.w * owner.h)) { owner = s; }
+      if (holds(s, x, y) && (!owner || s.w * s.h < owner.w * owner.h)) { owner = s; }
     }
     return owner;
   }
   function overlap(a, b) {
     return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
   }
+  // a lies inside b, allowing for rounding.
+  function within(a, b) {
+    return a.left >= b.left - 0.5 && a.right <= b.right + 0.5 && a.top >= b.top - 0.5 && a.bottom <= b.bottom + 0.5;
+  }
+  function inset(s, d) { return { left: s.left + d, right: s.right - d, top: s.top + d, bottom: s.bottom - d }; }
   function segmentBounds(p, q) {
     return { left: Math.min(p[0], q[0]), right: Math.max(p[0], q[0]),
              top: Math.min(p[1], q[1]), bottom: Math.max(p[1], q[1]) };
@@ -286,13 +295,57 @@ function createFigureKit(svg, rc) {
            seg.top <= s.bottom - EDGE_TOLERANCE && seg.bottom >= s.top + EDGE_TOLERANCE;
   }
 
+  // Connector rules, adapted from the geometry checks of cathrynlavery/diagram-design: every
+  // segment is horizontal or vertical, two connectors keep their lanes LANE_GAP apart, and no run
+  // hides under a box's stroke. Connectors that share their first point (a fan-out bus) or their
+  // last point (a merge) may share a lane.
+  function laneIssues() {
+    const found = [];
+    const same = (u, v) => Math.abs(u - v) < 0.5;
+    const samePoint = (a, b) => same(a[0], b[0]) && same(a[1], b[1]);
+    const at = (pt) => `(${Math.round(pt[0])}, ${Math.round(pt[1])})`;
+    const where = (s) => `${at(s.p)} -> ${at(s.q)}`;
+    // axis is the coordinate that stays fixed along the segment: 1 for a horizontal run, 0 for a vertical one.
+    const segs = connectors.flatMap((c, n) => c.points.slice(1).map((q, k) => {
+      const p = c.points[k];
+      const axis = same(p[1], q[1]) ? 1 : same(p[0], q[0]) ? 0 : -1;
+      return { n, p, q, axis, first: c.points[0], last: c.points[c.points.length - 1] };
+    }));
+    const span = (s) => [Math.min(s.p[1 - s.axis], s.q[1 - s.axis]), Math.max(s.p[1 - s.axis], s.q[1 - s.axis])];
+    const shared = (s, lo, hi) => Math.min(span(s)[1], hi) - Math.max(span(s)[0], lo);
+    for (const s of segs) {
+      if (s.axis < 0) { found.push(`connector segment ${where(s)} is diagonal`); }
+    }
+    const straight = segs.filter((s) => s.axis >= 0);
+    for (let i = 0; i < straight.length; i++) {
+      for (let j = i + 1; j < straight.length; j++) {
+        const a = straight[i], b = straight[j];
+        if (a.n === b.n || a.axis !== b.axis || samePoint(a.first, b.first) || samePoint(a.last, b.last)) { continue; }
+        const gap = Math.abs(a.p[a.axis] - b.p[a.axis]);
+        if (gap < LANE_GAP && shared(a, ...span(b)) > EDGE_TOLERANCE) {
+          found.push(`connectors ${Math.round(gap)} apart, lanes need ${LANE_GAP}: ${where(a)} and ${where(b)}`);
+        }
+      }
+    }
+    for (const s of straight) {
+      for (const b of shapes) {
+        const edges = s.axis === 1 ? [b.top, b.bottom] : [b.left, b.right];
+        const [lo, hi] = s.axis === 1 ? [b.left, b.right] : [b.top, b.bottom];
+        if (edges.some((e) => Math.abs(s.p[s.axis] - e) <= EDGE_TOLERANCE) && shared(s, lo, hi) > EDGE_TOLERANCE) {
+          found.push(`connector runs along the edge of "${b.name}": ${where(s)}`);
+        }
+      }
+    }
+    return found;
+  }
+
   // Measures the drawn text, so call it once the font has loaded. Writes the
   // report into the page as JSON, for scripts/check_figure.py to read.
   // drawError is what FIGURE.draw() threw, if anything; it is reported as the first issue.
   function finish(fontLoaded, drawError) {
     const issues = [];
-    if (drawError) { issues.push("draw() stopped: " + drawError); }
-    if (!fontLoaded) { issues.push("font not loaded: text fell back to a system font"); }
+    if (drawError) { issues.push(`draw() stopped: ${drawError}`); }
+    if (!fontLoaded) { issues.push(`font not loaded: text fell back to a system font`); }
     // Two bands per line: the fixed one, and the fixed one stretched to the line's own ink, since
     // stacked accents (Vietnamese capitals reach about 1 em), a tall apostrophe and descenders
     // can pass it. Box, canvas and connector checks use the stretched band.
@@ -351,7 +404,46 @@ function createFigureKit(svg, rc) {
         }
       }
     }
-    for (const points of connectors) {
+    // A label in a gutter, or a panel's own text, must stay clear of every box it does not sit in
+    // (the label-geometry rule of cathrynlavery/diagram-design, ADR 0005).
+    texts.forEach((t, i) => {
+      for (const s of shapes) {
+        if (!holds(s, t.x, t.y) && overlap(bounds[i], inset(s, EDGE_TOLERANCE))) {
+          issues.push(`text runs into "${s.name}": ${JSON.stringify(t.str)}`);
+        }
+      }
+    });
+    // Boxes nest or stand apart; one that straddles another's edge is a panel too small for it.
+    for (let i = 0; i < shapes.length; i++) {
+      for (let j = i + 1; j < shapes.length; j++) {
+        const a = shapes[i], b = shapes[j];
+        if (overlap(a, b) && !within(a, b) && !within(b, a)) {
+          const [small, big] = a.w * a.h <= b.w * b.h ? [a, b] : [b, a];
+          issues.push(`"${small.name}" crosses the edge of "${big.name}"`);
+        }
+      }
+    }
+    // A panel's fill covers whatever was drawn before it.
+    for (const p of shapes) {
+      if (!p.container || p.fill === "none") { continue; }
+      for (const s of shapes) {
+        if (s.order < p.order && overlap(s, p) && !within(p, s)) {
+          issues.push(`panel "${p.name}" hides "${s.name}", drawn before it`);
+        }
+      }
+      texts.forEach((t, i) => {
+        if (t.order < p.order && overlap(bounds[i], p)) {
+          issues.push(`panel "${p.name}" hides text ${JSON.stringify(t.str)}, drawn before it`);
+        }
+      });
+      for (const c of connectors) {
+        const covered = c.points.some((q, i) => i > 0 && overlap(segmentBounds(c.points[i - 1], q), p));
+        if (c.order < p.order && covered) {
+          issues.push(`panel "${p.name}" hides a connector drawn before it`);
+        }
+      }
+    }
+    for (const { points } of connectors) {
       for (let i = 1; i < points.length; i++) {
         const seg = segmentBounds(points[i - 1], points[i]);
         for (const s of shapes) {
@@ -367,6 +459,7 @@ function createFigureKit(svg, rc) {
         });
       }
     }
+    issues.push(...laneIssues());
     // Anything past the viewBox is cropped from the figure.
     const view = svg.viewBox.baseVal;
     if (view && view.width > 0) {
@@ -375,8 +468,8 @@ function createFigureKit(svg, rc) {
       texts.forEach((t, i) => {
         if (off(bounds[i])) { issues.push(`text leaves the canvas: ${JSON.stringify(t.str)}`); }
       });
-      if (connectors.some((points) => points.some(([x, y]) => off({ left: x, right: x, top: y, bottom: y })))) {
-        issues.push("a connector leaves the canvas");
+      if (connectors.some((c) => c.points.some(([x, y]) => off({ left: x, right: x, top: y, bottom: y })))) {
+        issues.push(`a connector leaves the canvas`);
       }
     }
     // The content height (not the viewport's) lets check_figure.py size a screenshot that
@@ -549,6 +642,83 @@ function createFigureKit(svg, rc) {
       g.line(-10, 6, 4, 6);
     },
     dashed(g) { g.dashedRect(-16, -16, 32, 32); },
+    // ---- Computer-vision icons, added after the first set so earlier figures keep their strokes ----
+    // Camera or sensor input: body, viewfinder bump, lens.
+    camera(g) {
+      g.rect(-18, -10, 36, 24);
+      g.rect(-8, -16, 14, 6);
+      g.circle(0, 2, 8);
+      g.circle(0, 2, 3, ICON_SUN);
+    },
+    // Video clip: a film strip with sprocket holes and a play mark.
+    video(g) {
+      g.rect(-18, -14, 36, 28);
+      g.line(-18, -8, 18, -8);
+      g.line(-18, 8, 18, 8);
+      for (const x of [-14, -5, 4, 13]) {
+        g.rect(x - 1.5, -12.5, 3, 3);
+        g.rect(x - 1.5, 9.5, 3, 3);
+      }
+      g.poly([[-4, -5], [-4, 5], [6, 0]], ICON_SUN);
+    },
+    // Segmentation mask: a filled region inside an image frame.
+    mask(g) {
+      g.rect(-18, -14, 36, 28);
+      g.path(`M ${g.at(-10, 8).join(" ")} C ${g.at(-16, -2).join(" ")} ${g.at(-6, -12).join(" ")} ${g.at(2, -8).join(" ")} ` +
+             `C ${g.at(12, -5).join(" ")} ${g.at(14, 6).join(" ")} ${g.at(4, 9).join(" ")} Z`, ICON_FILL);
+    },
+    // Pose or landmarks: joints joined by bones.
+    keypoints(g) {
+      const joints = { head: [0, -14], neck: [0, -7], hip: [0, 5], lh: [-11, 0], rh: [11, 0], lf: [-8, 16], rf: [8, 16] };
+      for (const [a, b] of [["head", "neck"], ["neck", "hip"], ["neck", "lh"], ["neck", "rh"], ["hip", "lf"], ["hip", "rf"]]) {
+        g.line(...joints[a], ...joints[b]);
+      }
+      for (const [x, y] of Object.values(joints)) { g.circle(x, y, 1.8, ICON_SUN); }
+    },
+    // Depth or 3D: a near face and a far face joined at the corners.
+    depth(g) {
+      g.rect(-8, -16, 24, 20);
+      g.rect(-16, -6, 24, 20, ICON_FILL);
+      g.line(-16, -6, -8, -16);
+      g.line(8, -6, 16, -16);
+      g.line(8, 14, 16, 4);
+    },
+    // Accelerator or serving hardware: a chip with pins.
+    gpu(g) {
+      g.rect(-12, -12, 24, 24, ICON_FILL);
+      g.rect(-6, -6, 12, 12);
+      for (const t of [-6, 0, 6]) {
+        g.line(t, -12, t, -17);
+        g.line(t, 12, t, 17);
+        g.line(-12, t, -17, t);
+        g.line(12, t, 17, t);
+      }
+    },
+    // Text prompt, tokenizer or captions: a speech bubble of lines, no glyphs.
+    text(g) {
+      g.rect(-17, -16, 34, 24);
+      g.poly([[-9, 8], [-13, 17], [-1, 8]]);
+      g.line(-11, -8, 11, -8);
+      g.line(-11, 0, 5, 0);
+    },
+    // Embedding vector: a column of cells.
+    embed(g) {
+      for (let i = 0; i < 5; i++) { g.rect(-7, -17 + i * 7, 14, 6, i % 2 ? ICON_FILL : null); }
+    },
+    // Crop or region of interest: corner marks round a dashed region.
+    crop(g) {
+      g.dashedRect(-10, -8, 20, 16);
+      for (const [x, y, dx, dy] of [[-16, -14, 1, 1], [16, -14, -1, 1], [-16, 14, 1, -1], [16, 14, -1, -1]]) {
+        g.line(x, y, x + 8 * dx, y);
+        g.line(x, y, x, y + 8 * dy);
+      }
+    },
+    // Tracking: an object's box and the trail of its earlier positions.
+    track(g) {
+      g.path(`M ${g.at(-17, 15).join(" ")} Q ${g.at(-8, 1).join(" ")} ${g.at(2, -3).join(" ")}`);
+      for (const [x, y] of [[-17, 15], [-11, 6], [-4, 0]]) { g.circle(x, y, 1.8, ICON_SUN); }
+      g.rect(2, -16, 15, 13);
+    },
   };
   const ICON_NAMES = Object.keys(ICON_DRAW);
   // Draws a named icon; color defaults to the figure ink.
