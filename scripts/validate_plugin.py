@@ -22,7 +22,7 @@ SKILL_KEYS = {
 AGENT_IGNORED = {"permissionMode", "hooks", "mcpServers", "initialPrompt"}
 CATALOG_STATUS = {"verified", "UNVERIFIED"}
 SCAN_PATHS = ["skills", "agents", "hooks", "rules", "shared", ".claude-plugin", "README.md"]
-SCAN_SUFFIXES = {".md", ".json", ".py", ".sh", ".yml", ".yaml"}
+SCAN_SUFFIXES = {".md", ".json", ".py", ".sh", ".yml", ".yaml", ".js", ".html"}
 
 
 def read_frontmatter(path: Path) -> tuple[dict, str]:

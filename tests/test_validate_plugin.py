@@ -124,6 +124,12 @@ def test_local_path_leak_fails(plugin):
     assert any("local path" in e for e in run_checks(plugin))
 
 
+@pytest.mark.parametrize("name", ["kit/figure-kit.js", "kit/shell.html"])
+def test_local_path_leak_in_script_or_page_fails(plugin, name):
+    write(plugin / "skills/demo" / name, "// built from /Users/someone/figure.js\n")
+    assert any(name in e and "local path" in e for e in run_checks(plugin))
+
+
 def test_rule_file_over_200_lines_fails(plugin):
     write(plugin / "rules/long.md", "line\n" * 201)
     assert any("long.md" in e for e in run_checks(plugin))
