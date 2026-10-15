@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title></title>
+<style>
+/*FONT_FACE*/
+</style>
+<script>
+/*ROUGH_JS*/
+</script>
+<style>
+  body { margin: 0; background: #fdfbf5; color: #2b2b2b; font-family: "__FONT_FAMILY__", "Comic Sans MS", cursive; }
+  .wrap { max-width: 1800px; margin: 0 auto; padding: 18px 16px 40px; }
+  h1 { font-size: 48px; margin: 4px 0 0; font-weight: 700; }
+  .sub { font-size: 21px; color: #5a5a5a; margin: 2px 0 10px; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { font-family: "__FONT_FAMILY__", "Comic Sans MS", cursive; fill: #2b2b2b; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1></h1>
+  <div class="sub"></div>
+  <svg id="fig" role="img"></svg>
+</div>
+<script>
+/*FIGURE_KIT*/
+</script>
+<script>
+/*FIGURE_SPEC*/
+</script>
+<script>
+(function () {
+  const svg = document.getElementById("fig");
+  const kit = createFigureKit(svg, rough.svg(svg));
+  // Whatever stops the spec (a syntax error leaves FIGURE undefined, a typo in a kind or a
+  // helper not destructured throws in draw) goes into the layout report, not only the console.
+  let drawError = null;
+  try {
+    // A translated edition sets FIGURE.lang (for example "vi") for screen readers and hyphenation.
+    document.documentElement.lang = FIGURE.lang || "en";
+    document.title = FIGURE.title;
+    document.querySelector("h1").textContent = FIGURE.title;
+    document.querySelector(".sub").textContent = FIGURE.subtitle;
+    svg.setAttribute("aria-label", FIGURE.title);
+    svg.setAttribute("viewBox", "0 0 " + FIGURE.width + " " + FIGURE.height);
+    FIGURE.draw(kit);
+  } catch (error) {
+    drawError = String(error);
+  }
+  // The layout check measures text, so it waits until the font is in use.
+  const family = "__FONT_FAMILY__";
+  function finish() {
+    const faces = [...document.fonts].filter((f) => f.family.replace(/["']/g, "") === family);
+    kit.finish(faces.length > 0 && faces.every((f) => f.status === "loaded"), drawError);
+  }
+  document.fonts.load('20px "' + family + '"').then(finish, finish);
+})();
+</script>
+</body>
+</html>
