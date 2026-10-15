@@ -1,0 +1,10 @@
+{
+  "name": "cv-kit",
+  "version": "0.1.0",
+  "description": "Skills, agents, hooks and rules for computer-vision engineers: model selection, embeddings and retrieval, sourced deep research, and git/SVN commit discipline.",
+  "author": { "name": "Lương Thanh Hoàng Phú" },
+  "homepage": "https://github.com/lthphuw/cv-kit",
+  "repository": "https://github.com/lthphuw/cv-kit",
+  "license": "MIT",
+  "keywords": ["computer-vision", "vlm", "object-detection", "embeddings", "research"]
+}

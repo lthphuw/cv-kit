@@ -1,0 +1,13 @@
+{
+  "name": "cv-kit",
+  "owner": { "name": "Lương Thanh Hoàng Phú" },
+  "description": "Marketplace for the cv-kit plugin.",
+  "plugins": [
+    {
+      "name": "cv-kit",
+      "source": "./",
+      "description": "Skills, agents, hooks and rules for computer-vision engineers.",
+      "category": "development"
+    }
+  ]
+}
