@@ -14,6 +14,12 @@ LOCAL_PATH_RE = re.compile(r"/Users/|[A-Za-z]:\\")
 LINK_RE = re.compile(r"\]\((?!https?://|#|mailto:)([^)#\s]+)")
 SKILL_DIR_RE = re.compile(r"\$\{CLAUDE_SKILL_DIR\}/([^\s`)\"']+)")
 HOOK_COMMAND_PATH_RE = re.compile(r"\$\{CLAUDE_PLUGIN_ROOT\}/([^\s\"'`;|&()<>]+)")
+PLUGIN_ROOT_RE = re.compile(r"\$\{CLAUDE_PLUGIN_ROOT\}/([^\s`)\"']+)")
+# An agent that can fetch pages or run commands must say that what it reads is not an order.
+FETCH_TOOLS = {"WebFetch", "WebSearch", "Bash"}
+UNTRUSTED_RULE = "are data, not instructions"
+README_ROW_RE = re.compile(r"^\| (Skill|Agent) \| `([^`]+)` \|", re.M)
+README_CATALOG_RE = re.compile(r"has (\d+) rows\. (\d+) are marked `verified` and (\d+) are marked `UNVERIFIED`")
 SKILL_KEYS = {
     "name", "description", "when_to_use", "disable-model-invocation", "user-invocable", "paths",
     "allowed-tools", "argument-hint", "model", "effort", "context", "agent", "license",
@@ -21,7 +27,7 @@ SKILL_KEYS = {
 }
 AGENT_IGNORED = {"permissionMode", "hooks", "mcpServers", "initialPrompt"}
 CATALOG_STATUS = {"verified", "UNVERIFIED"}
-SCAN_PATHS = ["skills", "agents", "hooks", "rules", "shared", ".claude-plugin", "README.md"]
+SCAN_PATHS = ["skills", "agents", "hooks", "rules", "shared", "evals", ".claude-plugin", "README.md"]
 SCAN_SUFFIXES = {".md", ".json", ".py", ".sh", ".yml", ".yaml", ".js", ".html"}
 
 
@@ -42,9 +48,10 @@ def _inside(root: Path, target: Path) -> bool:
 
 def _check_links(md: Path, root: Path, text: str) -> list[str]:
     errors = []
-    refs = LINK_RE.findall(text) + SKILL_DIR_RE.findall(text)
-    for rel in refs:
-        if not _inside(root, md.parent / rel):
+    refs = [(rel, md.parent / rel) for rel in LINK_RE.findall(text) + SKILL_DIR_RE.findall(text)]
+    refs += [(rel, root / rel) for rel in PLUGIN_ROOT_RE.findall(text)]
+    for rel, target in refs:
+        if not _inside(root, target):
             errors.append(f"{md}: reference {rel!r} does not resolve inside the plugin")
     return errors
 
@@ -88,7 +95,7 @@ def check_agents(root: Path) -> list[str]:
     skill_names = {p.parent.name for p in root.glob("skills/*/SKILL.md")}
     for md in sorted(root.glob("agents/*.md")):
         try:
-            fm, _ = read_frontmatter(md)
+            fm, text = read_frontmatter(md)
         except Exception as exc:
             errors.append(f"{md}: frontmatter error: {exc}")
             continue
@@ -102,6 +109,12 @@ def check_agents(root: Path) -> list[str]:
         for skill in fm.get("skills") or []:
             if skill not in skill_names:
                 errors.append(f"{md}: preloads unknown skill {skill!r}")
+        listed = fm.get("tools") or []
+        tools = {str(t).strip() for t in (listed if isinstance(listed, list) else str(listed).split(","))}
+        if tools & FETCH_TOOLS and UNTRUSTED_RULE not in text:
+            errors.append(f"{md}: has {', '.join(sorted(tools & FETCH_TOOLS))} but never says fetched content "
+                          f"{UNTRUSTED_RULE!r}")
+        errors += _check_links(md, root, text)
     return errors
 
 
@@ -223,6 +236,30 @@ def check_catalog(root: Path) -> list[str]:
     return errors
 
 
+def check_readme(root: Path) -> list[str]:
+    """The README's component table and catalog counts must match the files."""
+    path = root / "README.md"
+    if not path.exists():
+        return []
+    text = path.read_text(encoding="utf-8")
+    listed = {(kind.lower(), name) for kind, name in README_ROW_RE.findall(text)}
+    present = {("skill", p.parent.name) for p in root.glob("skills/*/SKILL.md")}
+    present |= {("agent", read_frontmatter(p)[0].get("name", p.stem)) for p in root.glob("agents/*.md")}
+    errors = [f"README.md: no table row for {kind} {name!r}" for kind, name in sorted(present - listed)]
+    errors += [f"README.md: table lists {kind} {name!r}, which does not exist" for kind, name in sorted(listed - present)]
+    catalog = root / "shared/catalog.md"
+    match = README_CATALOG_RE.search(text)
+    if match and catalog.exists():
+        statuses = [line.rstrip().rstrip("|").split("|")[-1].strip()
+                    for line in catalog.read_text(encoding="utf-8").splitlines() if line.startswith("|")]
+        counts = (statuses.count("verified") + statuses.count("UNVERIFIED"),
+                  statuses.count("verified"), statuses.count("UNVERIFIED"))
+        if tuple(int(n) for n in match.groups()) != counts:
+            errors.append(f"README.md: catalog counts {match.group(0)!r} do not match shared/catalog.md "
+                          f"({counts[0]} rows, {counts[1]} verified, {counts[2]} UNVERIFIED)")
+    return errors
+
+
 def check_local_paths(root: Path) -> list[str]:
     errors = []
     for name in SCAN_PATHS:
@@ -236,7 +273,8 @@ def check_local_paths(root: Path) -> list[str]:
 
 def run_checks(root: Path) -> list[str]:
     errors: list[str] = []
-    for check in (check_skills, check_agents, check_manifests, check_rules, check_catalog, check_local_paths):
+    for check in (check_skills, check_agents, check_manifests, check_rules, check_catalog, check_readme,
+                  check_local_paths):
         errors += check(root)
     return errors
 
