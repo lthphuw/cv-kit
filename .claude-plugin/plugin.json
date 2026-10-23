@@ -1,7 +1,7 @@
 {
   "name": "cv-kit",
-  "version": "0.1.0",
-  "description": "Skills, agents, hooks and rules for computer-vision engineers: model selection, embeddings and retrieval, sourced deep research, hand-drawn architecture figures, and git/SVN commit discipline.",
+  "version": "0.2.0",
+  "description": "Skills, agents, hooks and rules for computer-vision engineers: model selection, embeddings and retrieval, sourced deep research, hand-drawn architecture figures, strict Python and edge C++ review, refactoring and lint setup, and git/SVN commit discipline.",
   "author": { "name": "Lương Thanh Hoàng Phú" },
   "homepage": "https://github.com/lthphuw/cv-kit",
   "repository": "https://github.com/lthphuw/cv-kit",
