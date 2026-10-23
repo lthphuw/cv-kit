@@ -124,6 +124,16 @@ def test_local_path_leak_fails(plugin):
     assert any("local path" in e for e in run_checks(plugin))
 
 
+def test_windows_path_leak_fails(plugin):
+    write(plugin / "shared/notes.md", "Saved to C:\\Users\\someone\\out.png.\n")
+    assert any("notes.md" in e and "local path" in e for e in run_checks(plugin))
+
+
+def test_regex_with_backslash_after_colon_is_not_a_local_path(plugin):
+    write(plugin / "shared/notes.md", "Check: `grep: #\\s*ruff:\\s*noqa` and `type:\\s*ignore`.\n")
+    assert run_checks(plugin) == []
+
+
 @pytest.mark.parametrize("name", ["kit/figure-kit.js", "kit/shell.html"])
 def test_local_path_leak_in_script_or_page_fails(plugin, name):
     write(plugin / "skills/demo" / name, "// built from /Users/someone/figure.js\n")
@@ -133,6 +143,22 @@ def test_local_path_leak_in_script_or_page_fails(plugin, name):
 def test_rule_file_over_200_lines_fails(plugin):
     write(plugin / "rules/long.md", "line\n" * 201)
     assert any("long.md" in e for e in run_checks(plugin))
+
+
+def test_rule_with_paths_frontmatter_passes(plugin):
+    write(plugin / "rules/py.md", '---\npaths:\n  - "**/*.py"\n---\n\n# Python\n')
+    assert run_checks(plugin) == []
+
+
+@pytest.mark.parametrize(("frontmatter", "message"), [
+    ('paths: ["**/*.py"\n', "frontmatter error"),
+    ('paths:\n  - "**/*.py"\ndescription: x\n', "unknown frontmatter key 'description'"),
+    ("paths: []\n", "'paths' must be a non-empty list"),
+    ('paths: "**/*.py"\n', "'paths' must be a non-empty list"),
+])
+def test_rule_frontmatter_problems_fail(plugin, frontmatter, message):
+    write(plugin / "rules/py.md", f"---\n{frontmatter}---\n\n# Python\n")
+    assert any("py.md" in e and message in e for e in run_checks(plugin))
 
 
 def test_empty_plugin_manifest_still_needs_version(plugin):

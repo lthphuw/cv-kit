@@ -10,7 +10,8 @@ import yaml
 
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 ARXIV_RE = re.compile(r"^\d{4}\.\d{4,5}(v\d+)?$")
-LOCAL_PATH_RE = re.compile(r"/Users/|[A-Za-z]:\\")
+# A drive letter must stand alone, so a regex such as `ruff:\s*noqa` is not read as `f:\`.
+LOCAL_PATH_RE = re.compile(r"/Users/|(?<![A-Za-z0-9_])[A-Za-z]:\\")
 LINK_RE = re.compile(r"\]\((?!https?://|#|mailto:)([^)#\s]+)")
 SKILL_DIR_RE = re.compile(r"\$\{CLAUDE_SKILL_DIR\}/([^\s`)\"']+)")
 HOOK_COMMAND_PATH_RE = re.compile(r"\$\{CLAUDE_PLUGIN_ROOT\}/([^\s\"'`;|&()<>]+)")
@@ -202,11 +203,25 @@ def _check_handler_paths(root: Path, hooks_file: Path, handler: dict) -> list[st
 
 
 def check_rules(root: Path) -> list[str]:
-    return [
-        f"{md}: more than 200 lines"
-        for md in sorted(root.glob("rules/*.md"))
-        if md.read_text(encoding="utf-8").count("\n") + 1 > 200
-    ]
+    errors = []
+    for md in sorted(root.glob("rules/*.md")):
+        text = md.read_text(encoding="utf-8")
+        if text.count("\n") + 1 > 200:
+            errors.append(f"{md}: more than 200 lines")
+        if not text.startswith("---\n"):
+            continue
+        # Claude Code reads only `paths` from a rule, and loads a rule whose frontmatter does not parse for every file.
+        try:
+            fm, _ = read_frontmatter(md)
+        except Exception as exc:
+            errors.append(f"{md}: frontmatter error: {exc}")
+            continue
+        for key in sorted(set(fm) - {"paths"}):
+            errors.append(f"{md}: unknown frontmatter key {key!r}; a rule reads only 'paths'")
+        paths = fm.get("paths")
+        if not (isinstance(paths, list) and paths and all(isinstance(p, str) and p for p in paths)):
+            errors.append(f"{md}: 'paths' must be a non-empty list of glob strings")
+    return errors
 
 
 def check_catalog(root: Path) -> list[str]:
