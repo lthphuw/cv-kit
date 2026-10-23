@@ -4,12 +4,35 @@ cv-kit is a Claude Code plugin for computer-vision engineers. It helps you scope
 
 ## Install
 
-The repository is private, so you need GitHub access to it before the install works.
+The repository is private. Claude Code clones it by running `git` on your machine with prompts turned off, so it
+uses only credentials your machine already stores; the marketplace has no field for a token. Set up access once:
+
+1. **Read access.** The owner adds your GitHub account as a collaborator with read permission (repository
+   Settings > Collaborators, or `gh api -X PUT repos/lthphuw/cv-kit/collaborators/<your-login> -f permission=pull`),
+   and you accept the invitation from the e-mail or https://github.com/notifications.
+2. **A stored credential**, one of:
+   - HTTPS (simplest): install the GitHub CLI, run `gh auth login` (choose HTTPS), then `gh auth setup-git`, which
+     makes `gh` git's credential helper for github.com.
+   - SSH: a key added to your GitHub account, loaded in `ssh-agent` (no passphrase prompt), and github.com in
+     `known_hosts`. `ssh -T git@github.com` greets you by name when it works.
+3. **Check** from a shell: `GIT_TERMINAL_PROMPT=0 git ls-remote https://github.com/lthphuw/cv-kit.git HEAD` prints
+   a commit hash. If it asks for a password or fails, Claude Code will fail too.
+
+Then, in Claude Code:
 
 ```
 /plugin marketplace add lthphuw/cv-kit
 /plugin install cv-kit@cv-kit
 ```
+
+For `owner/repo`, Claude Code first tries SSH (`ssh -T git@github.com`) and falls back to HTTPS when that fails. On
+a machine without a GitHub SSH key you can set `CLAUDE_CODE_PLUGIN_PREFER_HTTPS=1` in your shell profile to skip the
+SSH attempt.
+
+Updates: background auto-update is off until you turn it on in `/plugin` > Marketplaces > cv-kit > Enable
+auto-update; otherwise run `/plugin marketplace update cv-kit`. A new copy arrives only when the `version` in
+`.claude-plugin/plugin.json` changes. The background check uses the same stored credential and never prompts; if it
+cannot authenticate, your installed copy keeps working at its last version.
 
 To develop the plugin locally, point Claude Code at a checkout:
 
