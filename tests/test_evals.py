@@ -34,7 +34,7 @@ OFF_TOPIC = "off-topic"
 ANY_SKILL = "no-cv-kit-skill"
 # Skill names that sit close to cv-kit's own and must never match a cv-kit pattern.
 DECOYS = ("deep-research", "brainstorming", "superpowers:brainstorming", "model-selection", "commit",
-          "cv-deep-research-v2", "figure")
+          "cv-deep-research-v2", "figure", "code-review", "simplify", "review", "refactor", "py-cpp-review-v2")
 # Strings each regex grader must and must not find in a final reply.
 REGEX_SAMPLES = {
     "no-trailer": (

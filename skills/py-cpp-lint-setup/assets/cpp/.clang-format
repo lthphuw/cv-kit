@@ -1,0 +1,26 @@
+# clang-format settings behind cv-kit's C++ rules (.claude/rules/cpp-style.md): Google style, braces
+# always, `int* p`, includes regrouped in Google order.
+BasedOnStyle: Google
+Language: Cpp
+Standard: c++20
+DerivePointerAlignment: false
+PointerAlignment: Left
+InsertBraces: true
+IncludeBlocks: Regroup
+InsertNewlineAtEOF: true
+# Google's include groups: related header, C system, C++ standard, other libraries, this project.
+# Replace PROJECT_ROOT with the directory your project's own includes start with ("PROJECT_ROOT/infer/engine.h"),
+# and add the third-party libraries you include with angle brackets to the first regex.
+IncludeCategories:
+  - Regex: '^<(opencv2|NvInfer|NvOnnxParser|cuda|cuda_runtime|onnxruntime|tensorflow|Eigen|gtest|gmock|benchmark|absl|fmt|spdlog)[/._]'
+    Priority: 3
+  - Regex: '^<ext/.*\.h>'
+    Priority: 2
+  - Regex: '^<.*\.h>'
+    Priority: 1
+  - Regex: '^<.*'
+    Priority: 2
+  - Regex: '^"PROJECT_ROOT/'
+    Priority: 4
+  - Regex: '.*'
+    Priority: 3

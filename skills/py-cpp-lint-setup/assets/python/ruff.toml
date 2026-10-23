@@ -1,0 +1,51 @@
+# Strict ruff settings behind cv-kit's Python rules (.claude/rules/python-style.md).
+# Line length 80 and 4-space indent follow the Google Python Style Guide. Format with `ruff format`;
+# the ignored E/W/D/COM/ISC codes are the ones that conflict with the formatter.
+# Suppress a finding only on its line, with the code and a reason: `# noqa: B008  # <reason>`.
+
+target-version = "py310"
+line-length = 80
+indent-width = 4
+
+[format]
+quote-style = "double"
+docstring-code-format = true
+
+[lint]
+select = [
+  "A", "ANN", "ARG", "B", "BLE", "C4", "D", "DTZ", "E", "ERA", "EXE", "F",
+  "FBT", "G", "I", "ISC", "LOG", "N", "NPY", "PERF", "PGH", "PIE", "PL", "PTH",
+  "RET", "RSE", "RUF", "S", "SIM", "SLF", "T20", "TD", "TID", "TRY", "UP", "W",
+]
+ignore = [
+  # Conflict with `ruff format`.
+  "COM812", "ISC001", "E501", "W191", "E111", "E114", "E117", "D206", "D300",
+  # TD002 asks for an author, which the Google guide forbids; TD003 rejects its
+  # TODO(b/123) and TODO(https://...) forms; TRY003 flags the interpolated error
+  # messages the rules require.
+  "TD002", "TD003", "TRY003",
+]
+
+[lint.per-file-ignores]
+"**/test_*.py" = ["S101", "PLR2004", "D", "ANN", "SLF001"]
+"**/*_test.py" = ["S101", "PLR2004", "D", "ANN", "SLF001"]
+
+[lint.pydocstyle]
+convention = "google"
+
+[lint.pep8-naming]
+# `import torch.nn.functional as F` is a standard abbreviation.
+extend-ignore-names = ["F"]
+
+[lint.isort]
+force-single-line = true
+single-line-exclusions = ["typing", "collections.abc", "typing_extensions"]
+force-sort-within-sections = true
+order-by-type = false
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[lint.pycodestyle]
+max-line-length = 80
+max-doc-length = 80

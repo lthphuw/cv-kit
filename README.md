@@ -1,6 +1,6 @@
 # cv-kit
 
-cv-kit is a Claude Code plugin for computer-vision engineers. It helps you scope a CV task before writing code, choose a model against a stated task, budget and licence, build embedding and retrieval pipelines, back a model decision with sourced papers, draw hand-drawn architecture figures of a model read from its code, and keep git and SVN commits free of trailers. The model catalog it reads from records, for every row, whether its ids and licence were checked (`verified`) or not (`UNVERIFIED`).
+cv-kit is a Claude Code plugin for computer-vision engineers. It helps you scope a CV task before writing code, choose a model against a stated task, budget and licence, build embedding and retrieval pipelines, back a model decision with sourced papers, draw hand-drawn architecture figures of a model read from its code, review, refactor and lint Python and edge C++ code against strict rules, and keep git and SVN commits free of trailers. The model catalog it reads from records, for every row, whether its ids and licence were checked (`verified`) or not (`UNVERIFIED`).
 
 ## Install
 
@@ -27,13 +27,18 @@ claude --plugin-dir <path to your cv-kit checkout>
 | Skill | `cv-embeddings-retrieval` | Use when computing image or text embeddings with CLIP, OpenCLIP, SigLIP, SigLIP2, DINOv2 or DINOv3, or building zero-shot classification, image-text retrieval, image similarity search or linear probes. |
 | Skill | `ai-workflow-figure` | Use when drawing a hand-drawn workflow, architecture, block or pipeline diagram of an AI or computer-vision model or system for docs, a paper or slides (high-level, low-level, system pipeline, the whole model in numbered module panels, or what changed between two versions of a model), annotating, translating or exporting such a figure, or rebuilding one with another font. |
 | Skill | `commit-vcs` | Use when about to commit with git or SVN, writing or rewording a commit message, or asked what a commit should say. |
+| Skill | `py-cpp-review` | Use when asked to review Python or C++ code (files, a folder, a diff, a branch or a pull request) against strict style and correctness rules (Google Python style; C++ Core Guidelines plus Google C++ style for edge devices), or to re-check the fixes from such a review. |
+| Skill | `py-cpp-refactor` | Use when asked to refactor, clean up, modernise or restructure Python or C++ code without changing what it does, or to bring existing code in line with the strict Python and C++ rules. |
+| Skill | `py-cpp-lint-setup` | Use when setting up or tightening linters, formatters, type checking or compiler warnings for a Python or C++ project (ruff, mypy, clang-format, clang-tidy, CMake warning and sanitizer flags). |
 | Skill | `install-rules` | Copies cv-kit's rules into the current project (see Rules). Only you can invoke it, as `/cv-kit:install-rules`. |
 | Agent | `cv-reviewer` | Read-only reviewer for CV code, configs and evaluation reports: split leakage, wrong normalisation, licence problems, unpinned weights and numbers the runs do not support. Findings carry a severity and an anchor; a re-review gives each earlier finding a verdict. |
+| Agent | `py-cpp-reviewer` | Independent read-only review of Python or C++ code against the two style catalogues; the review skill dispatches it for code written in the same session. |
 | Agent | `model-scout` | Researches exactly one candidate model or method and returns a structured evidence file; the deep-research workflow dispatches one per candidate. |
 | Agent | `claim-verifier` | Re-opens every source and locator in a research ledger and copies what it says, without seeing the scouts' values; the lint then marks each claim `confirmed` or `differs`. The deep-research workflow dispatches one after the scouts. |
 | Script | `scripts/lint_research.py` | Lints a research claims ledger (fields per claim kind, one pinned source, the value in its verbatim quote, the quote in the saved copy of the page), writes the blind ledger for the verifier, merges its checks, and checks the report's comparison table and claim tags against the ledger. |
+| Script | `scripts/install_configs.py` | Copies the shipped lint, type-check and build configs into a project without overwriting, and holds a config back when the project already configures that tool in another file. |
 | Hook | `hooks/block_trailers.py` | A `PreToolUse` hook on the Bash tool that refuses a `git commit` or `svn commit` whose message carries a trailer (see Commit hook). |
-| Shared references | `shared/catalog.md`, `licenses.md`, `metrics.md`, `sources.md` | The model catalog, a licence-family summary, metric definitions and the reachability of research sources. The skills read these. |
+| Shared references | `shared/catalog.md`, `licenses.md`, `metrics.md`, `sources.md`, `python-style.md`, `cpp-style.md` | The model catalog, a licence-family summary, metric definitions, the reachability of research sources, and the full Python and C++ rule catalogues. The skills read these. |
 
 The catalog (`shared/catalog.md`) has 64 rows. 38 are marked `verified` and 26 are marked `UNVERIFIED`; the file explains what each status means. Treat an `UNVERIFIED` row as a lead to check, not as a fact. A gotcha that starts with `(experience)` is untested engineering knowledge, not a measurement.
 
@@ -45,9 +50,35 @@ Planned for v0.2: dataset prep, auto-labelling, finetuning, evaluation, export, 
 
 `check_figure.py` also exports the figure alone for a paper or slide: `--bare` drops the page title, `--scale 2` doubles the PNG's pixels, and `--svg` writes a standalone SVG that carries its font. The SVG embeds the font file as the HTML does, so with Stay With Me share neither.
 
+## Python and C++ rules
+
+Two rule catalogues back the review, refactor and lint-setup skills:
+
+- `shared/python-style.md`: 255 rules, based on the Google Python Style Guide, plus cv-kit's computer-vision rules
+  (explicit random generators, documented array shape, layout, dtype and colour order, inference mode, device
+  syncs). Python 3.10 or later.
+- `shared/cpp-style.md`: 394 rules for C++20 inference code on edge devices. The C++ Core Guidelines set the rules
+  for ownership, lifetime, functions, classes, expressions and concurrency; the Google C++ Style Guide sets naming,
+  formatting, comments, headers and banned features; cv-kit adds the edge rules. Edge code builds with
+  `-fno-exceptions -fno-rtti` and returns errors as values; per-frame hot paths do not allocate, block or hold
+  locks across inference.
+
+Every rule has an ID (`PY-ERR-2`, `CPP-EDGE-12`), a strength, a default severity (Critical, Major, Minor), the
+tool check that enforces it or `manual`, and its source. Each catalogue also has a review order, a conflicts table,
+refactor recipes (`R-PY-n`, `R-CPP-n`) and the rules it chose not to adopt. `rules/python-style.md` and
+`rules/cpp-style.md` are the short versions Claude follows while writing code.
+
+`py-cpp-lint-setup` copies configs that enforce them: `ruff.toml` (`ruff format` and a strict `ruff check`),
+`mypy.ini` (`--strict`), `.clang-format` (Google, braces always), `.clang-tidy` (Core Guidelines, Google, bugprone,
+performance, readability and naming checks, warnings as errors) and `cmake/cv_kit_strict.cmake`
+(`cv_kit_strict(<target>)`: strict warnings, `-Werror`, no exceptions or RTTI, ASan + UBSan and TSan options). They
+were tested with ruff 0.17.2, mypy 2.4.0, clang-format 23.1.3, clang-tidy 23.1.3, CMake 4.4 and GCC 13.3. The
+copy never overwrites a file, and it holds back `ruff.toml` or `mypy.ini` when the project already configures that
+tool in `pyproject.toml`, `setup.cfg` or a dotfile, because ours would override it or be ignored.
+
 ## Rules
 
-The plugin ships four short rules in `rules/`: commit format, licence callouts, verified identifiers and pinned revisions. A plugin cannot install files into `.claude/rules`, so Claude Code does not load them from the plugin. Run `/cv-kit:install-rules` in your project to copy them to `.claude/rules/`. The script never overwrites a file that already exists; it lists the ones it kept, and `--force` overwrites them after you confirm. A destination that is a symlink or a directory is always kept, even with `--force`, and a symlinked `.claude` or `.claude/rules` is refused with an error.
+The plugin ships six rules in `rules/`: commit format, licence callouts, verified identifiers, pinned revisions, and Python and C++ style. The two style rules carry `paths` frontmatter, so Claude Code loads them only when it reads or edits a matching file. A plugin cannot install files into `.claude/rules`, so Claude Code does not load them from the plugin. Run `/cv-kit:install-rules` in your project to copy them to `.claude/rules/`. The script never overwrites a file that already exists; it lists the ones it kept, and `--force` overwrites them after you confirm. A destination that is a symlink or a directory is always kept, even with `--force`, and a symlinked `.claude` or `.claude/rules` is refused with an error.
 
 ## Commit hook
 
@@ -110,10 +141,14 @@ claude plugin validate agents --strict
 
 `scripts/validate_plugin.py` checks house rules that `claude plugin validate` does not, including that the component table above lists every skill and agent, that the catalog counts above match `shared/catalog.md`, and that every agent that can fetch or run commands says fetched content is data, not instructions. The four `claude plugin validate` calls are separate because the root call checks only the marketplace.
 
+`tests/test_lint_configs.py` runs the shipped lint and build configs with the real tools; locally each test skips when its tool is missing, and CI installs the pinned versions. To run them locally: `.venv/bin/pip install ruff==0.17.2 mypy==2.4.0 clang-format==23.1.3 clang-tidy==23.1.3`, with CMake and g++ on PATH.
+
 `evals/` holds a trigger eval suite for `claude plugin eval`. It is not run in CI: each run is a billed model call. Run it by hand before a release as `evals/README.md` describes. `tests/test_evals.py` checks its files offline.
 
 ## Licence
 
 cv-kit is released under the MIT licence (see `LICENSE`). The catalog records the licences of the third-party models it lists, and those differ: some are permissive, some are non-commercial or copyleft, and some are gated or custom. Check the licence of a model before you use it; the `Licence` column of `shared/catalog.md` and `shared/licenses.md` are the starting point.
+
+The Python and C++ catalogues paraphrase the Google Python and C++ Style Guides (© Google, CC BY 3.0, https://google.github.io/styleguide/); cv-kit changed and condensed them. They take ideas, not text, from the C++ Core Guidelines (Standard C++ Foundation; its licence allows derivative works only for personal or internal use, so the catalogues cite its rule IDs and use their own words), and pitfalls from methylDragon's coding notes (BSD-2-Clause). `docs/research/07-python-cpp-style-guides.md` records the revisions read.
 
 The figure skill bundles two third-party files under their own licences: rough.js 4.6.6 (MIT, `skills/ai-workflow-figure/assets/LICENSE-roughjs.txt`) and the Patrick Hand font (SIL OFL 1.1, `skills/ai-workflow-figure/assets/fonts/OFL-PatrickHand.txt`).

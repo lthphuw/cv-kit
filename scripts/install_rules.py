@@ -9,25 +9,38 @@ from pathlib import Path
 RULES_DIR = Path(__file__).resolve().parents[1] / "rules"
 
 
-def install(rules_dir: Path, project: Path, force: bool = False) -> tuple[list[str], list[str]]:
-    target = project / ".claude" / "rules"
-    for link in (project / ".claude", target):
-        if link.is_symlink():
-            raise ValueError(f"{link}: refusing to write through a symlink")
-    # Backstop for links that is_symlink() does not report.
-    if not target.resolve().is_relative_to(project.resolve()):
-        raise ValueError(f"{target}: refusing to write through a symlink")
-    target.mkdir(parents=True, exist_ok=True)
+def copy_new(pairs: list[tuple[Path, str]], project: Path, force: bool = False) -> tuple[list[str], list[str]]:
+    """Copy each (source, path relative to project) pair, keeping files that already exist.
+
+    Returns the relative paths copied and kept. Raises ValueError, before writing anything, when a directory on
+    the way to a destination is a symlink or resolves outside the project.
+    """
+    root = project.resolve()
+    for _, rel in pairs:
+        destination = project / rel
+        for parent in [p for p in destination.parents if p != project and project in p.parents]:
+            if parent.is_symlink():
+                raise ValueError(f"{parent}: refusing to write through a symlink")
+        # Backstop for links that is_symlink() does not report.
+        if not destination.parent.resolve().is_relative_to(root):
+            raise ValueError(f"{destination.parent}: refusing to write through a symlink")
     copied, skipped = [], []
-    for source in sorted(rules_dir.glob("*.md")):
-        destination = target / source.name
+    for source, rel in pairs:
+        destination = project / rel
         # is_symlink() also catches dangling links, which exists() reports as absent.
         if destination.is_symlink() or destination.is_dir() or (destination.exists() and not force):
-            skipped.append(source.name)
+            skipped.append(rel)
             continue
+        destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, destination)
-        copied.append(source.name)
+        copied.append(rel)
     return copied, skipped
+
+
+def install(rules_dir: Path, project: Path, force: bool = False) -> tuple[list[str], list[str]]:
+    pairs = [(source, f".claude/rules/{source.name}") for source in sorted(rules_dir.glob("*.md"))]
+    copied, skipped = copy_new(pairs, project, force)
+    return [Path(rel).name for rel in copied], [Path(rel).name for rel in skipped]
 
 
 def main(argv: list[str] | None = None) -> int:
