@@ -1,6 +1,7 @@
 # 06 - diagram-design: what cv-kit took, and from where
 
 Date: 2026-10-15. Input for the `ai-workflow-figure` changes made the same day.
+`<refs>` is the author's working folder outside this repository (clones, notes, probes); it is not published.
 Legend: **VERIFIED** = seen in a file, a build or a render today. **UNVERIFIED** = named in the repository, not checked by us.
 
 ## The resource
@@ -12,13 +13,13 @@ Legend: **VERIFIED** = seen in a file, a build or a render today. **UNVERIFIED**
 | Licence | **MIT**, copyright 2025 Cathryn Lavery (`LICENSE:1-3`). Vendored icons and fonts carry their own licences (`THIRD_PARTY_LICENSES.md`). |
 | Stars | 55,511 (`gh api repos/cathrynlavery/diagram-design`, 2026-10-15) |
 | What it is | A skill for editorial diagrams (44 types) as self-contained HTML and SVG, with geometry checkers, import from Mermaid, draw.io and Excalidraw, and SVG/PNG export, packaged for several agent hosts. |
-| Clone | `/mnt/data2/projects/cv-kit-refs/diagram-design`, outside this repository. Read only; nothing in it was run, installed or built. |
+| Clone | `<refs>/diagram-design`, outside this repository. Read only; nothing in it was run, installed or built. |
 
 **Licence consequence.** MIT allows reuse with attribution. cv-kit still wrote its own code: diagram-design draws crisp editorial SVG, cv-kit draws hand-drawn rough.js figures, so the rules and checks were adopted, not the files. The adopted checks are attributed in `kit/figure-kit.js` (the connector rules and the label rule), `references/kit.md` and `references/house-style.md` (the delta layout). No vendored icon, font or SVG was copied.
 
 ## How it was read
 
-Three research agents with disjoint scopes, each reading its files in full (or saying which it skimmed), comparing them with `ai-workflow-figure`, and citing every fact as `path:line`. Their notes, 1,756 lines in total, are kept outside the repository in `/mnt/data2/projects/cv-kit-refs/notes/`:
+Three research agents with disjoint scopes, each reading its files in full (or saying which it skimmed), comparing them with `ai-workflow-figure`, and citing every fact as `path:line`. Their notes, 1,756 lines in total, are kept outside the repository in `<refs>/notes/`:
 
 | Note | Scope |
 |---|---|

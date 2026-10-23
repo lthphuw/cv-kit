@@ -14,7 +14,7 @@ Date: 2026-10-14. Nothing was installed, no repo was modified, no `git commit` /
 
 ## A. What the existing rf-detr rules contain, and what is reusable
 
-Read (read-only): `.claude/rules/git.md`, `.claude/rules/pr.md`, `.claude/skills/preparing-rfdetr-pr/SKILL.md`, a grep of the other five skills for commit and preview handling, `.claude/settings.json` (only `enabledPlugins`), `.claude/settings.local.json` (no attribution key), `~/.claude/settings.json` (no `attribution` / `includeCoAuthoredBy` key), and the memory files `no-claude-attribution`, `git-commit-push-workflow`, `no-review-mentions-in-drafts`.
+Read (read-only): `.claude/rules/git.md`, `.claude/rules/pr.md`, `.claude/skills/preparing-rfdetr-pr/SKILL.md`, a grep of the other five skills for commit and preview handling, `.claude/settings.json` (only `enabledPlugins`), `.claude/settings.local.json` (no attribution key), `~/.claude/settings.json` (no `attribution` / `includeCoAuthoredBy` key), and the author's saved preferences.
 
 **Current protection is rule-only.** No settings key and no hook enforces "no trailers". The rule works because project instructions take precedence over the harness default: the session that produced this research received a system reminder asking for a `Co-Authored-By:` line, and the rule won. The official docs back that mechanism, with one exception (managed settings, B5).
 
@@ -25,9 +25,9 @@ Read (read-only): `.claude/rules/git.md`, `.claude/rules/pr.md`, `.claude/skills
 | | "First run `verifying-rfdetr-changes`, then `reviewing-rfdetr-changes`"; the line `Review: <n> fixed, <m> open` | **rf-detr-specific** (names its own skills). Generic kernel: report verification (commands with real result lines, and what was not verified) in the preview, never in the message. Keep the kernel, drop the names. |
 | | Merge commits exempt from the preview | **rf-detr-specific** (its push flow). Drop. |
 | git.md "No trailers" | List of banned trailers; `--signoff` / `--trailer` banned; message = subject + optional body | **Generic, reusable almost verbatim.** Extend with SVN's equivalents. |
-| | Message never says who or what reviewed the change, how many rounds, which findings were fixed | **Generic.** Keep (user preference, memory 2026-10-08). The review result goes in the preview. |
+| | Message never says who or what reviewed the change, how many rounds, which findings were fixed | **Generic.** Keep (user preference). The review result goes in the preview. |
 | git.md "Before every push" | `git fetch upstream` + `git merge upstream/develop`, merge not rebase | **rf-detr-specific** (fork layout, branch names). Generic kernel to keep as a user preference: sync with the base branch before pushing, stop on conflict, confirm the push, never force-push. |
-| git.md "PR branches that maintainers have touched" | Borda; `git merge origin/<branch>` before any edit | **rf-detr-specific.** Kernel (optional): if others push to the branch, fetch and merge before editing. |
+| git.md "PR branches that maintainers have touched" | a named maintainer; `git merge origin/<branch>` before any edit | **rf-detr-specific.** Kernel (optional): if others push to the branch, fetch and merge before editing. |
 | git.md "Outward-facing steps belong to the user" | Claude never opens PRs or posts comments; drafts in `.temp/<topic>/` | The policy is **generic as a default** (user preference); the `.temp/` path is **specific**. |
 | git.md "Hooks" | Never `--no-verify`; `SKIP=mypy` exception | `--no-verify` ban **generic**; `SKIP=mypy` **specific**. |
 | pr.md | Section order Summary / Changes / Verification / Known follow-ups / Performance; Performance needs hardware, command, repetitions, before/after table | **Generic and valuable for CV.** Belongs to a separate `pr-description` skill, outside this task. |
@@ -36,7 +36,7 @@ Read (read-only): `.claude/rules/git.md`, `.claude/rules/pr.md`, `.claude/skills
 | preparing-rfdetr-pr | `type(scope): imperative summary` with the rf-detr scope list | The *shape* is a repo convention, not universal; the **scopes are specific**. |
 | | Body "says what was broken, what the change does, and why this approach and not the obvious alternative" (example `repeat` vs `tile`) | **Generic.** Best sentence in the set; reused as the body rule. |
 | | CHANGELOG, `pre-commit run --all-files`, fork/upstream, Copilot, `action_required` | **rf-detr-specific.** |
-| Memory files | Dated user feedback (2026-09-18, 09-19, 10-08) | Evidence for why each rule exists. Not shipped; cite as design rationale in the plugin README. |
+| Saved preferences | The author's own feedback on earlier commits | Evidence for why each rule exists. Not shipped. |
 
 **Gaps that cv-kit should close:** no SVN at all; no title-length or mood rule in `git.md`; no guidance on passing a multi-line message safely; no handling of `--amend` or force-push beyond the push rule; nothing mechanical (no hook, no settings key); `Closes #N` is allowed in PR bodies and nothing says whether an issue footer may appear in a commit (cv-kit's answer: only inside a sentence).
 

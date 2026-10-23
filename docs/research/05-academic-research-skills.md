@@ -1,6 +1,7 @@
 # 05 - academic-research-skills: what cv-kit took, and from where
 
 Date: 2026-10-15. Input for the research-side changes made the same day (`cv-deep-research`, `model-scout`, the new `claim-verifier`, `cv-reviewer`, `lint_research.py`, `validate_plugin.py`, `evals/`).
+`<refs>` is the author's working folder outside this repository (clones, notes, probes); it is not published.
 Legend: **VERIFIED** = seen in a response or a file today. **UNVERIFIED** = named in the repository, not opened by us.
 
 ## The resource
@@ -12,13 +13,13 @@ Legend: **VERIFIED** = seen in a response or a file today. **UNVERIFIED** = name
 | Licence | **CC BY-NC 4.0** (`LICENSE:1-4`, copyright Cheng-I Wu). GitHub's API reports `NOASSERTION`. |
 | Stars, last push | 52,035; 2026-10-13 (`gh api repos/imbad0202/academic-research-skills`, 2026-10-15) |
 | What it is | A Claude Code plugin for academic research and writing: deep research, paper writing, peer review, a research-to-publication pipeline, systematic-review screening. |
-| Clone | `/mnt/data2/projects/cv-kit-refs/academic-research-skills`, outside this repository. Read only; nothing in it was run, installed or built. |
+| Clone | `<refs>/academic-research-skills`, outside this repository. Read only; nothing in it was run, installed or built. |
 
 **Licence consequence.** cv-kit is MIT. A non-commercial licence cannot be relicensed as MIT, so cv-kit takes ideas and mechanisms only. Every adopted rule below was written in our own words; no ARS text, prompt, fixture or code was copied. Shipped cv-kit files do not reference ARS paths; only this note does.
 
 ## How it was read
 
-Four research agents, each with a disjoint scope, each reading its files in full (or saying which it skimmed), comparing them with the cv-kit counterparts, and citing every fact as `path:line`. Their notes, 1,833 lines in total, are kept outside the repository in `/mnt/data2/projects/cv-kit-refs/notes/`:
+Four research agents, each with a disjoint scope, each reading its files in full (or saying which it skimmed), comparing them with the cv-kit counterparts, and citing every fact as `path:line`. Their notes, 1,833 lines in total, are kept outside the repository in `<refs>/notes/`:
 
 | Note | Scope | Read |
 |---|---|---|
@@ -59,7 +60,7 @@ The RCT evidence pyramid, APA style, PRISMA, meta-analysis and GRADE in full, th
 
 ## Probes made for this note (2026-10-15)
 
-Raw responses are in `/mnt/data2/projects/cv-kit-refs/probe/`.
+Raw responses are in `<refs>/probe/`.
 
 | Request | Result (VERIFIED) |
 |---|---|

@@ -1,6 +1,7 @@
 # 07 - Python and C++ style guides: what cv-kit took, and from where
 
 Date: 2026-10-23. Input for the Python and C++ rules (`rules/python-style.md`, `rules/cpp-style.md`), their full
+`<refs>` is the author's working folder outside this repository (clones, notes, probes); it is not published.
 catalogues (`shared/python-style.md`, `shared/cpp-style.md`), the skills `py-cpp-review`, `py-cpp-refactor` and
 `py-cpp-lint-setup`, the agent `py-cpp-reviewer`, `scripts/install_configs.py` and the shipped lint and build configs.
 
@@ -17,14 +18,14 @@ The user named the Google guides and the methylDragon notes in the request, and 
 mid-task. The user then chose (in chat, 2026-10-23): combine the Core Guidelines (semantics, safety) with Google
 (naming, layout, headers, feature bans); edge C++ is built without exceptions and RTTI and returns errors as values.
 
-Clones: `/mnt/data2/projects/cv-kit-refs/{google-styleguide,CppCoreGuidelines,coding-notes}`, outside this
+Clones: `<refs>/{google-styleguide,CppCoreGuidelines,coding-notes}`, outside this
 repository. Read only; nothing in them was run, installed or built.
 
 ## How they were read
 
 Eleven reader agents, disjoint scopes, each reading every line of its scope in chunks and citing `path:line`; then
 four synthesis agents and one merge agent. All notes are outside the repository in
-`/mnt/data2/projects/cv-kit-refs/notes/`.
+`<refs>/notes/`.
 
 | Note | Scope | Size |
 |---|---|---|
@@ -41,7 +42,7 @@ four synthesis agents and one merge agent. All notes are outside the repository 
 | `style-11-cppcg-e.md` | CG 17130-22163 (T, CPL, SF, SL, A, NR, Pro, GSL, NL), Appendix B 22268-22312, Appendix D 22886-22898 | 450 lines, 167 entries |
 | `style-decisions.md` | the decisions above, given to every synthesis agent | |
 
-The synthesis drafts are in `/mnt/data2/projects/cv-kit-refs/drafts/` (`python-style.md`, `cpp-a.md` semantics,
+The synthesis drafts are in `<refs>/drafts/` (`python-style.md`, `cpp-a.md` semantics,
 `cpp-b.md` Google layer, `cpp-c.md` edge, errors and build); the merge produced `shared/cpp-style.md`.
 
 ## What the sources gave, and what cv-kit added
@@ -67,7 +68,7 @@ The synthesis drafts are in `/mnt/data2/projects/cv-kit-refs/drafts/` (`python-s
 
 ## Tools: what was verified, with which versions
 
-All in a scratch virtualenv outside the repository (`/mnt/data2/projects/cv-kit-refs/lint-venv`, from PyPI):
+All in a scratch virtualenv outside the repository (`<refs>/lint-venv`, from PyPI):
 ruff 0.17.2, mypy 2.4.0, clang-format 23.1.3, clang-tidy 23.1.3, cmake 4.4.4, ninja; GCC 13.3 from the system.
 
 - Every ruff code cited in the Python catalogue was checked with `ruff rule`, and against the resolved set the
