@@ -132,4 +132,4 @@ project documents as running every frame under a latency budget, plus everything
 - Suppress a finding only on its line, with a reason: `// NOLINT(check-name): reason`, naming every check name clang-tidy prints, or `// cv-kit: allow[CPP-XXX-n]: reason` for a rule no tool checks (CPP-DOC-18).
 
 Formatting is clang-format's job (Google style, 80 columns, `int* p`, braces always); do not hand-format against
-it. The full C++ catalogue, with checks and severities, and code review are in the cv-kit plugin's `py-cpp-review` skill.
+it. The full C++ catalogue, with checks and severities, and code review are in the cv-kit plugin's `review` skill (`/cv-kit:review`).

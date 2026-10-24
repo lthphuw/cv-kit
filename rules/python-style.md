@@ -122,4 +122,4 @@ Python 3.10 or later. Where the project has its own written rule, that rule wins
 - Add tests with every behaviour change; tests use pytest `assert`, fixed seeds, no network or GPU, and tolerance comparisons (PY-TEST-1, PY-TEST-6, PY-TEST-7).
 
 Layout is `ruff format`'s job (80 columns, 4 spaces, double quotes); do not hand-format against it. The
-complete catalogue, with checks and severities, and code review are in the cv-kit plugin's `py-cpp-review` skill.
+complete catalogue, with checks and severities, and code review are in the cv-kit plugin's `review` skill (`/cv-kit:review`).
