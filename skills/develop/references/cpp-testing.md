@@ -1,8 +1,7 @@
 # C++ tests: GoogleTest, test first
 
 GoogleTest (`google/googletest`) is the default for every C++ project. The rules follow its `docs/primer.md`,
-`docs/advanced.md` and `docs/quickstart-cmake.md`, read at commit `cd8e73f` (release line 1.18.0); the clone is in
-`research/test-conventions/repos/googletest/` if you have run the research skill here. It needs C++17 or later.
+`docs/advanced.md` and `docs/quickstart-cmake.md`, read at commit `cd8e73f` (release line 1.18.0). It needs C++17 or later.
 
 ## The loop
 

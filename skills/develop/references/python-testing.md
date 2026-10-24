@@ -2,8 +2,7 @@
 
 pytest is the default for every Python project, new or old. Take the project's existing layout and markers first.
 The rules below follow roboflow/rf-detr `AGENTS.md` ("Testing Principles") and `.github/CONTRIBUTING.md`
-("Test-Driven Development"), read at commit `5b22dfc` of `develop`; the clone is in
-`research/test-conventions/repos/rf-detr/` if you have run the research skill here.
+("Test-Driven Development"), read at commit `5b22dfc` of `develop`.
 
 ## The loop
 
