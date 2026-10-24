@@ -1,8 +1,8 @@
 # cv-kit trigger evals
 
 A small `claude plugin eval` suite that checks which cv-kit skill Claude picks for a request, and that it
-picks none when the request is not for cv-kit. Twenty cases: each model-invocable skill has at least one case
-where it must fire and one where it must not, plus confusable pairs and two off-topic requests. Nine cases also
+picks none when the request is not for cv-kit. Twenty-two cases: each model-invocable skill has at least one case
+where it must fire and one where it must not, plus confusable pairs and two off-topic requests. Eleven cases also
 check one rule of the skill's first reply.
 
 The suite runs by hand before a release, not in CI (see "Why not in CI"). `tests/test_evals.py` checks the
@@ -12,7 +12,7 @@ files offline on every run of the test suite.
 
 | Skill | Must fire in | Must not fire in |
 | --- | --- | --- |
-| `develop` | 01 (feature), 02 (C++ bug), 03 (refactor) | 11 (a review request) |
+| `develop` | 01 (feature), 02 (C++ bug), 03 (refactor), 21, 22 (routing) | 11 (a review request) |
 | `research` | 04, 05, 06, 07 (one benchmark claim), 08 (image embeddings), 10 (clone and compare) | 09 (text-only search) |
 | `review` | 11 | 03 (a refactor request) |
 | `commit` | 12 | 13 (release notes) |
@@ -28,8 +28,10 @@ for the brief; no number from memory), 07 (does not settle the claim from memory
 rule ID, and the throw, detached thread, race or leak is Critical), 12 (no trailer in the suggested message),
 14 (says the code is missing instead of inventing the architecture).
 
-Routing to agents, models and effort is not covered here: a read-only run cannot start an agent. Check it by hand
-with a real task and look at the `model` and `effort` on each Agent call.
+Cases 21 and 22 grant the `Agent` tool and check routing: which agent is dispatched and with which `model`. They
+run read-only, so the dispatched agent cannot edit; the check is on the call. Confirm the model that actually ran
+with `/tasks` in a live session. Eval runs load no `.claude/` folder or `CLAUDE.md`, so rules installed by `setup`
+are not active in them.
 
 ## Layout
 

@@ -238,3 +238,29 @@ def test_patterns_behave_the_same_under_node():
 def test_results_folder_is_ignored():
     lines = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
     assert "evals/results/" in lines
+
+
+AGENT_SAMPLES = {
+    "engineer-on-opus": (
+        ['{"description":"x","subagent_type":"cv-kit:engineer","model":"opus","prompt":"p"}',
+         '{"model":"opus","subagent_type":"engineer","prompt":"p"}'],
+        ['{"subagent_type":"cv-kit:engineer","model":"sonnet"}', '{"subagent_type":"cv-kit:explorer","model":"opus"}',
+         '{"subagent_type":"cv-kit:engineer","prompt":"use opus"}'],
+    ),
+    "explorer-on-haiku": (
+        ['{"subagent_type":"cv-kit:explorer","model":"haiku","prompt":"p"}', '{"model":"haiku","subagent_type":"explorer"}'],
+        ['{"subagent_type":"cv-kit:explorer","model":"opus"}', '{"subagent_type":"cv-kit:engineer","model":"haiku"}'],
+    ),
+}
+
+
+@pytest.mark.parametrize("name", sorted(AGENT_SAMPLES))
+def test_agent_routing_graders_match_only_the_right_call(name):
+    path = next(p for p in GRADERS if p.stem == name)
+    front, _ = split(path)
+    assert front["type"] == "tool_used" and front["tool"] == "Agent"
+    hits, misses = AGENT_SAMPLES[name]
+    for sample in hits:
+        assert re.search(front["input_match"], sample), sample
+    for sample in misses:
+        assert not re.search(front["input_match"], sample), sample
