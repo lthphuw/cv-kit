@@ -1,8 +1,3 @@
----
-name: cv-embeddings-retrieval
-description: Use when computing image or text embeddings with CLIP, OpenCLIP, SigLIP, SigLIP2, DINOv2 or DINOv3, or building zero-shot classification, image-text retrieval, image similarity search or linear probes.
----
-
 # Embeddings and retrieval
 
 Read the encoder rows in `${CLAUDE_SKILL_DIR}/../../shared/catalog.md` (sections for contrastive image-text models and self-supervised backbones) before choosing; check each row's Status, Licence and Gotcha columns. A Gotcha starting `(experience)` is a hypothesis to check, not measured fact; keep that label when you repeat it.
@@ -19,4 +14,4 @@ Read the encoder rows in `${CLAUDE_SKILL_DIR}/../../shared/catalog.md` (sections
 5. **Evaluate on the user's data**: build a held-out set of queries with known relevant items, report Recall@k (see `${CLAUDE_SKILL_DIR}/../../shared/metrics.md`), and say which hardware and resolution were used. For a linear probe, split by image group (not by image) to avoid leakage.
 6. **Zero-shot classification**: write several prompt templates per class, average their normalised text embeddings, and test the choice of template on a validation split.
 
-State the licence of the chosen encoder next to its name; some releases are gated or non-commercial. Do not quote leaderboard numbers from memory; route to `cv-deep-research` for sourced comparisons.
+State the licence of the chosen encoder next to its name; some releases are gated or non-commercial. Do not quote leaderboard numbers from memory; route to the pipeline in `SKILL.md` for sourced comparisons.

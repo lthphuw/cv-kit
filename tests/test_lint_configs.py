@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-ASSETS = ROOT / "skills/py-cpp-lint-setup/assets"
+ASSETS = ROOT / "skills/setup/assets"
 
 GOOD_PY = '''\
 """Crop helpers for detector inputs."""

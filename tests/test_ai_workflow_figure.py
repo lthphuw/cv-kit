@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-SKILL = Path(__file__).resolve().parents[1] / "skills/ai-workflow-figure"
+SKILL = Path(__file__).resolve().parents[1] / "skills/figure"
 BUILD = SKILL / "scripts/build_figure.py"
 CHECK = SKILL / "scripts/check_figure.py"
 BUNDLED_FONT = SKILL / "assets/fonts/PatrickHand-Regular.woff2"

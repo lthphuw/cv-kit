@@ -8,7 +8,7 @@ from pathlib import Path
 
 from install_rules import copy_new
 
-ASSETS = Path(__file__).resolve().parents[1] / "skills" / "py-cpp-lint-setup" / "assets"
+ASSETS = Path(__file__).resolve().parents[1] / "skills" / "setup" / "assets"
 FILES = {
     "python": ["ruff.toml", "mypy.ini"],
     "cpp": [".clang-format", ".clang-tidy", "cmake/cv_kit_strict.cmake"],

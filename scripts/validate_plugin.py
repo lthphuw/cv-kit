@@ -27,6 +27,10 @@ SKILL_KEYS = {
     "compatibility", "metadata",
 }
 AGENT_IGNORED = {"permissionMode", "hooks", "mcpServers", "initialPrompt"}
+# Agents pin a full model id so the routing in skills/develop does not drift; add new ids here as they ship.
+AGENT_MODELS = {"inherit", "haiku", "sonnet", "opus", "fable", "claude-haiku-5-5", "claude-sonnet-5-5",
+                "claude-opus-5-5", "claude-fable-5-1"}
+AGENT_EFFORTS = {"low", "medium", "high", "xhigh", "max"}
 CATALOG_STATUS = {"verified", "UNVERIFIED"}
 SCAN_PATHS = ["skills", "agents", "hooks", "rules", "shared", "evals", ".claude-plugin", "README.md"]
 SCAN_SUFFIXES = {".md", ".json", ".py", ".sh", ".yml", ".yaml", ".js", ".html"}
@@ -107,6 +111,10 @@ def check_agents(root: Path) -> list[str]:
             errors.append(f"{md}: missing description")
         for key in sorted(AGENT_IGNORED & set(fm)):
             errors.append(f"{md}: {key} is ignored for plugin agents")
+        if "model" in fm and fm["model"] not in AGENT_MODELS:
+            errors.append(f"{md}: model {fm['model']!r} is not one of {sorted(AGENT_MODELS)}")
+        if "effort" in fm and fm["effort"] not in AGENT_EFFORTS:
+            errors.append(f"{md}: effort {fm['effort']!r} is not one of {sorted(AGENT_EFFORTS)}")
         for skill in fm.get("skills") or []:
             if skill not in skill_names:
                 errors.append(f"{md}: preloads unknown skill {skill!r}")

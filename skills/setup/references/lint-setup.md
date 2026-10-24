@@ -1,8 +1,3 @@
----
-name: py-cpp-lint-setup
-description: Use when setting up or tightening linters, formatters, type checking or compiler warnings for a Python or C++ project (ruff, mypy, clang-format, clang-tidy, CMake warning and sanitizer flags) so that it enforces strict Python and C++ rules.
----
-
 # Set up strict lint and build checks
 
 cv-kit ships configs that enforce its Python and C++ rules. They were tested with ruff 0.17.2, mypy 2.4.0, clang-format 23.1.3, clang-tidy 23.1.3, CMake 4.4 and GCC 13.
@@ -26,5 +21,5 @@ The rules behind them are in `${CLAUDE_SKILL_DIR}/../../shared/python-style.md` 
    - `.clang-tidy`: the project-specific settings (macro prefix, allowed logging and check macros, the project's result types in `bugprone-unused-return-value.CheckedReturnTypes`, per-directory files for a portability layer or device code) are listed under "Per-project settings" in the C++ catalogue; propose the values, set them after a yes.
    - Pin the tool versions in the project's dev requirements, pre-commit or CI (`ruff==0.17.2`, `mypy==2.4.0`, `clang-format==23.1.3`, `clang-tidy==23.1.3` are the tested ones).
    - Code that cannot build without exceptions (a library that throws) stays in a separate target without `cv_kit_strict`, behind a boundary that converts errors; do not drop the flag for the whole project.
-5. **First run.** Run the tools and report counts per code or check, not every line. Do not mass-fix. Offer the order: a formatting-only pass as its own commit, then `ruff check --fix` safe fixes, then the rest with the `py-cpp-refactor` skill. For a large legacy codebase, offer to turn the strict checks on per directory instead of adding suppressions.
-6. **Rules for writing code.** The matching rules for Claude are installed with `/cv-kit:install-rules`, which copies `python-style.md` and `cpp-style.md` into `.claude/rules/`; mention it if they are not there.
+5. **First run.** Run the tools and report counts per code or check, not every line. Do not mass-fix. Offer the order: a formatting-only pass as its own commit, then `ruff check --fix` safe fixes, then the rest with `/cv-kit:develop`. For a large legacy codebase, offer to turn the strict checks on per directory instead of adding suppressions.
+6. **Rules for writing code.** The matching rules for Claude are installed by this skill's rules step, which copies `python-style.md` and `cpp-style.md` into `.claude/rules/`; mention it if they are not there.

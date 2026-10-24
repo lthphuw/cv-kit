@@ -263,3 +263,26 @@ def test_readme_catalog_counts_must_match(plugin):
     assert run_checks(plugin) == []
     write(plugin / "README.md", README_TABLE + sentence.format(3, 2, 1))
     assert any("catalog counts" in e for e in run_checks(plugin))
+
+
+@pytest.mark.parametrize("line", ["model: claude-haiku-5-5", "model: inherit", "effort: xhigh",
+                                  "model: claude-opus-5-5\neffort: high"])
+def test_agent_accepts_a_known_model_and_effort(plugin, line):
+    write(plugin / "agents/a.md", f"---\nname: a\ndescription: d\n{line}\n---\nbody\n")
+    assert run_checks(plugin) == []
+
+
+@pytest.mark.parametrize("line, word", [("model: gpt-5", "model"), ("model: claude-opus-4", "model"),
+                                        ("effort: extreme", "effort"), ("effort: 3", "effort")])
+def test_agent_rejects_an_unknown_model_or_effort(plugin, line, word):
+    write(plugin / "agents/a.md", f"---\nname: a\ndescription: d\n{line}\n---\nbody\n")
+    assert any(f"{word} " in e and "agents/a.md" in e for e in run_checks(plugin))
+
+
+def test_shipped_agents_set_their_own_model_and_effort():
+    import yaml
+    root = Path(__file__).resolve().parents[1]
+    for md in sorted(root.glob("agents/*.md")):
+        front = yaml.safe_load(md.read_text(encoding="utf-8").split("---\n")[1])
+        assert front.get("model", "inherit") != "inherit", f"{md.name}: set a model"
+        assert front.get("effort"), f"{md.name}: set an effort"

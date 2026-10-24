@@ -1,6 +1,6 @@
 ---
-name: commit-vcs
-description: Use when about to commit with git or SVN, writing or rewording a commit message, or asked what a commit should say.
+name: commit
+description: Use when about to commit, amend or push with git or SVN, writing or rewording a commit message or a pull-request description, or asked what a commit should say. Commits carry no trailers and are previewed before they are made.
 ---
 
 # Commit with git or SVN

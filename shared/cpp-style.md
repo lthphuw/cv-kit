@@ -61,7 +61,7 @@ All code fragments in this file are cv-kit's own.
 
 ## Tooling
 
-The `py-cpp-lint-setup` skill installs three files into a project; together they enforce every rule whose
+The `setup` skill installs three files into a project; together they enforce every rule whose
 *Check* names a tool.
 
 | File | What it enforces |
@@ -82,7 +82,7 @@ when reading the *Check* fields:
 What stays manual: every rule whose *Check* says `manual` or gives only a `grep:` pattern, the parts of a rule a
 check covers only partly (the *Check* says so), tests that a rule requires (allocation counters, fault injection,
 sanitizer runs, on-target measurements), and design questions such as ownership, lifetimes, thread ownership and
-error policy. Those are where review time goes; the `py-cpp-review` skill walks them in the order below.
+error policy. Those are where review time goes; the `review` skill walks them in the order below.
 
 ## Severity
 
