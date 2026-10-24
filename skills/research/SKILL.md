@@ -1,6 +1,8 @@
 ---
 name: research
 description: Use when a model, method, library or claim must be chosen, compared or checked with evidence, such as picking a detector, segmenter, encoder or VLM for a task, budget and licence; SOTA or paper comparisons; embeddings, CLIP/SigLIP/DINO retrieval; whether a README, paper or model-card number is right; or any R&D that needs papers and reference code downloaded and cross-checked.
+argument-hint: "[question, model, paper or claim]"
+allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/research_workspace.py *) Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/lint_research.py *)
 ---
 
 # Research
@@ -47,8 +49,8 @@ yes; a run happens in a throwaway environment and its result is labelled `reprod
    it; an undecided one advances; never exclude on a benchmark number here. Listed = excluded + advanced. At most
    six advance. Show the table and wait for approval.
 4. **Deep-read.** One `researcher` agent per approved candidate, in parallel, with the candidate, the brief, what is
-   ruled out, the folder and its output path. Use `model` `claude-sonnet-5-5`, `effort` `high`; a paper-heavy or
-   contradictory candidate gets `claude-opus-5-5`.
+   ruled out, the folder and its output path. Use `model` `sonnet`, `effort` `high`; a paper-heavy or
+   contradictory candidate gets `model` `opus`.
 5. **Cross-check.** Merge the scouts' `claims` into `claims.json` and carry their `not_found`, `access_failed` and
    `caveats` into the report. Run LINT `claims.json --blind blind.json`, where LINT is
    `python3 "${CLAUDE_SKILL_DIR}/../../scripts/lint_research.py"`. Dispatch one `claim-verifier` with `blind.json`; it

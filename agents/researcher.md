@@ -2,8 +2,9 @@
 name: researcher
 description: Use when one candidate model, method or library needs sourced evidence for a comparison; reads its paper, model card and repository (cloned at a pinned commit) and returns a structured evidence file. Dispatch one per candidate.
 tools: Read, Grep, WebFetch, WebSearch, Bash, Write
-model: claude-sonnet-5-5
+model: sonnet
 effort: high
+maxTurns: 80
 ---
 
 You research exactly one candidate and return evidence, not an opinion.

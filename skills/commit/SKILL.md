@@ -1,9 +1,15 @@
 ---
 name: commit
 description: Use when about to commit, amend or push with git or SVN, writing or rewording a commit message or a pull-request description, or asked what a commit should say. Commits carry no trailers and are previewed before they are made.
+argument-hint: "[what changed, or leave empty]"
+allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project_facts.py *)
 ---
 
 # Commit with git or SVN
+
+Facts read just now:
+
+!`python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project_facts.py facts .`
 
 Detect the VCS first: `git rev-parse --is-inside-work-tree` succeeding means git (it also works in worktrees and subdirectories), and `svn info` succeeding means SVN. Do not look for a `.git` directory, because `.git` can be a file.
 

@@ -1,6 +1,8 @@
 ---
 name: develop
 description: Use when writing, fixing, refactoring, testing or scoping code in Python or C++ (computer vision or not), before touching any code. Applies test-first, systematic debugging, simplicity and evidence, and sends the work to agents with a model and effort sized to the task.
+argument-hint: "[feature, bug or goal]"
+allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project_facts.py *) Bash(python3 ${CLAUDE_PLUGIN_ROOT}/hooks/evidence_gate.py *)
 ---
 
 # Develop
@@ -14,11 +16,18 @@ Four principles, applied on every change:
 3. **Simplicity.** The smallest change that passes. No abstraction with one user, no option nobody asked for, no
    new dependency. Delete before adding.
 4. **Evidence over claims.** "Done", "fixed" and "faster" need command output from this turn: tests, linters,
-   build, and for a hot path a measurement. Say what did not run.
+   build, and for a hot path a measurement. Print the literal output; say what did not run.
 
 If the superpowers plugin is installed, its brainstorming, debugging, TDD and verification skills cover the generic
 process; follow them and use this skill for the rules, tests and routing below. A project's own written rule
 (`CLAUDE.md`, `.claude/rules/`, lint and build configs) beats anything here.
+
+## Facts read just now
+
+!`python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project_facts.py facts .`
+!`python3 ${CLAUDE_PLUGIN_ROOT}/hooks/evidence_gate.py arm ${CLAUDE_SESSION_ID}`
+
+Treat a fact above as true only for what it says; "not found" means look yourself, do not assume.
 
 ## Flow
 
@@ -27,7 +36,8 @@ process; follow them and use this skill for the rules, tests and routing below. 
 2. **Look first.** Read the project's rules and test setup, then run the existing tests for a baseline.
 3. **Red, green, refactor.** Python tests use pytest (`${CLAUDE_SKILL_DIR}/references/python-testing.md`), C++ tests
    use GoogleTest (`${CLAUDE_SKILL_DIR}/references/cpp-testing.md`). Read the one that applies before writing the
-   first test. Refactors follow `${CLAUDE_SKILL_DIR}/references/refactor.md`.
+   first test. Refactors follow `${CLAUDE_SKILL_DIR}/references/refactor.md`; `/simplify` is a good last pass on the
+   changed code once the tests are green.
 4. **Verify.** Run the tests and the linters. For anything non-trivial, or code you wrote this session, have the
    `reviewer` agent check it; give it the diff and the tool output, not your conclusions.
 5. **Commit** only when asked, through `/cv-kit:commit`.
@@ -38,16 +48,27 @@ project: `/cv-kit:setup`.
 ## Route the work
 
 Route yourself; do not ask the user. Pick the agent, then pass `model` and `effort` on the Agent call by how hard
-the task is (the table is this skill's explicit instruction to set them):
+the task is (this table is the instruction to set them). `model` takes the aliases `haiku`, `sonnet`, `opus`; they
+resolve to Haiku 5.5, Sonnet 5.5 and Opus 5.5 on the Anthropic API.
 
-| Task | Agent | Model | Effort |
+| Task | Agent | `model` | `effort` |
 | --- | --- | --- | --- |
-| Find, read or summarise code, logs, docs | `explorer` | `claude-haiku-5-5` | low |
-| Ordinary feature, bug fix, test, refactor step | `engineer` | `claude-sonnet-5-5` | medium |
-| Unclear bug, cross-module design, concurrency, numerics, performance, security | `engineer` | `claude-opus-5-5` | high |
-| Independent review of non-trivial or self-written code | `reviewer` | `claude-opus-5-5` | high |
+| Find, read or summarise code, logs, docs | `explorer` | `haiku` | low |
+| Ordinary feature, bug fix, test, refactor step | `engineer` | `sonnet` | medium |
+| Unclear bug, cross-module design, concurrency, numerics, performance, security | `engineer` | `opus` | high |
+| Independent review of non-trivial or self-written code | `reviewer` | `opus` | high |
 
 Escalate one row after a failed attempt (and to `xhigh` on the last row); never resend the same prompt. Run
-independent tasks, ones that share no files, in one message so they run in parallel. A brief states the goal, the
-constraints, what is ruled out and the exact files; an agent knows nothing else. Check what comes back against the
-output you asked for before you merge it. More detail: `${CLAUDE_SKILL_DIR}/references/routing.md`.
+independent tasks, ones that share no files, in one message so they run in parallel; give each `engineer` that
+edits files in parallel `isolation: worktree`. A brief states the goal, the constraints, what is ruled out and the
+exact files; an agent knows nothing else. Check what comes back against the output you asked for before you merge it.
+More detail: `${CLAUDE_SKILL_DIR}/references/routing.md`.
+
+## Unattended runs (`/goal`, `/loop`)
+
+When the prompt came from `/goal <condition>` or a `/loop`, nobody is there to answer. Take the brief from the
+condition and do not ask; if it leaves out something that changes the result, state your assumption and go on.
+`/goal`'s judge reads only the transcript, so end every turn with the literal output of the check (test summary,
+exit status, linter result), not a description of it. Never commit or push, and never run code from a cloned repo,
+unless the condition says so. After two failed fixes stop and report what the evidence shows. Condition templates
+are in `${CLAUDE_SKILL_DIR}/references/unattended.md`.

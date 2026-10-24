@@ -1,6 +1,7 @@
 ---
 name: figure
 description: Use when drawing a hand-drawn workflow, architecture, block or pipeline diagram of an AI or computer-vision model or system for docs, a paper or slides (high-level, low-level, system pipeline, the whole model in numbered module panels, or what changed between two versions of a model), annotating, translating or exporting such a figure, or rebuilding one with another font.
+argument-hint: "[what to draw, and the code it comes from]"
 ---
 
 # Figure
