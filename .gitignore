@@ -3,3 +3,7 @@ __pycache__/
 .pytest_cache/
 .superpowers/
 evals/results/
+research/*/repos/
+.DS_Store
+.ruff_cache/
+.mypy_cache/
