@@ -22,7 +22,10 @@ Known gaps. The hook does not see:
 
 The hook runs `python3`, which must be on PATH. If it is missing, the shell exits 127, which Claude Code treats as non-blocking, so the commit goes through.
 
-Claude Code also treats any non-blocking hook failure (an exit code other than 0 or 2) as a pass, so the hook is a guard, not a guarantee.
+Claude Code treats any non-blocking hook failure (an exit code other than 0 or 2) as a pass. The trailer hook sets
+`"onFailure": "block"`, so a crash, a timeout or invalid output refuses the command instead (Claude Code 2.1.295 or
+later; earlier versions do not know the field). It is still a guard, not a guarantee: an installed mod can approve a
+call that a `PreToolUse` hook blocked, unless managed settings or a Team or Enterprise login apply.
 
 ## Switching off Claude Code's own attribution
 
@@ -39,3 +42,21 @@ The hook and the `commit` skill stop a trailer in a message the agent writes. Cl
 - `attribution.sessionUrl` is a separate switch. It controls the `Claude-Session` trailer and the PR session link in cloud and Remote Control sessions, so blanking `commit` does not turn it off.
 - `includeCoAuthoredBy` is deprecated since Claude Code v2.0.62. It is ignored once `attribution.commit` or `attribution.pr` is set.
 - Managed settings can override your own rules. Claude Code tells Claude that your CLAUDE.md or memory instructions about attribution take precedence, unless the line is set in managed settings. If an administrator set `attribution` there, a rule in your project or in this plugin may not win.
+
+## Evidence gate
+
+`evidence_gate.py` listens to `PostToolUse`, `PostToolUseFailure`, `Stop` and `SubagentStop` (only for
+`cv-kit:engineer`). It does nothing until the `develop` skill arms it for the session. Once armed it keeps a ledger
+under `~/.cache/cv-kit/gate/` (set `CV_KIT_GATE_DIR` to move it, delete it any time):
+
+- An edit to a code file (`.py`, `.cc`, `.cpp`, `.h`, `.hpp`, `.cu`, `CMakeLists.txt` and similar) makes any earlier
+  green test run stale. Docs and data files do not count.
+- A Bash command counts as a green run only if it is a test command (`pytest`, `ctest`, `tox`, `make test`,
+  `go test`, `cargo test`, a `*_test` binary) that exited 0 and whose exit status is trustworthy: not piped
+  (unless `pipefail` is set), not followed by `|| true`, and not followed by another `;` command.
+- When a turn ends with a stale edit, the gate blocks once with a reason. It does not block again for the same edit,
+  does not block when `stop_hook_active` is set or a background task is running, and any error lets the turn end.
+  Claude Code also stops after eight consecutive Stop blocks.
+
+It is a nudge toward "evidence over claims", not a proof: it cannot tell that the right tests ran. A request for only
+a failing test (the red step) is answered by saying so.
