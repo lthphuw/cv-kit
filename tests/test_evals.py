@@ -32,9 +32,10 @@ ARMS = {"with-only", "both"}
 CASE_NAME = re.compile(r"^\d{2}-(?P<subject>[a-z0-9-]+?)-(?P<kind>fire|nofire)-[a-z0-9-]+$")
 OFF_TOPIC = "off-topic"
 ANY_SKILL = "no-cv-kit-skill"
-# Skill names that sit close to cv-kit's own and must never match a cv-kit pattern.
-DECOYS = ("deep-research", "brainstorming", "superpowers:brainstorming", "model-selection", "commit",
-          "cv-deep-research-v2", "figure", "code-review", "simplify", "review", "refactor", "py-cpp-review-v2")
+# Skill names from other plugins that sit close to cv-kit's own and must never match a cv-kit pattern.
+DECOYS = ("deep-research", "superpowers:brainstorming", "superpowers:requesting-code-review",
+          "superpowers:test-driven-development", "commit-commands:commit", "code-review", "simplify",
+          "figma:figure", "other:review", "develop-v2", "research-notes", "reviewer", "setup-env", "recommit")
 # Strings each regex grader must and must not find in a final reply.
 REGEX_SAMPLES = {
     "no-trailer": (

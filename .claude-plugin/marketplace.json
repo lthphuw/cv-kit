@@ -6,7 +6,7 @@
     {
       "name": "cv-kit",
       "source": "./",
-      "description": "Skills, agents, hooks and rules for computer-vision engineers.",
+      "description": "Test-first development, evidence-backed CV research, strict review and commit discipline.",
       "category": "development"
     }
   ]

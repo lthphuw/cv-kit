@@ -1,9 +1,9 @@
 # cv-kit trigger evals
 
 A small `claude plugin eval` suite that checks which cv-kit skill Claude picks for a request, and that it
-picks none when the request is not for cv-kit. Twenty cases: each model-invocable skill has at least one
-case where it must fire and one where it must not, plus confusable pairs and two off-topic requests. Seven
-cases also check one rule of the skill's first reply.
+picks none when the request is not for cv-kit. Twenty cases: each model-invocable skill has at least one case
+where it must fire and one where it must not, plus confusable pairs and two off-topic requests. Nine cases also
+check one rule of the skill's first reply.
 
 The suite runs by hand before a release, not in CI (see "Why not in CI"). `tests/test_evals.py` checks the
 files offline on every run of the test suite.
@@ -12,23 +12,24 @@ files offline on every run of the test suite.
 
 | Skill | Must fire in | Must not fire in |
 | --- | --- | --- |
-| `cv-brainstorm` | 01 | 02 |
-| `cv-model-selection` | 02, 03 | 01, 04 |
-| `cv-deep-research` | 04, 05, 06 (one benchmark claim) | 03 |
-| `cv-embeddings-retrieval` | 07 | 08 (text-only search) |
-| `ai-workflow-figure` | 09, 10 (model v1 vs v2) | 11 (a matplotlib plot) |
-| `commit-vcs` | 12 | 13 (release notes) |
-| `py-cpp-review` | 17 | 18 (a refactor request) |
-| `py-cpp-refactor` | 18 | 17 (a review request) |
-| `py-cpp-lint-setup` | 19 | 20 (what one warning means) |
-| `install-rules` | never (user-invoked only) | 14 |
-| any cv-kit skill | | 15, 16 |
+| `develop` | 01 (feature), 02 (C++ bug), 03 (refactor) | 11 (a review request) |
+| `research` | 04, 05, 06, 07 (one benchmark claim), 08 (image embeddings), 10 (clone and compare) | 09 (text-only search) |
+| `review` | 11 | 03 (a refactor request) |
+| `commit` | 12 | 13 (release notes) |
+| `figure` | 14, 15 (model v1 vs v2) | 16 (a matplotlib plot) |
+| `setup` | never (user-invoked only) | 17, 18 |
+| any cv-kit skill | | 19, 20 |
 
-Behaviour graders: 03 (every named model carries a licence; no benchmark number from memory), 05 (asks for the
-brief; no number from memory), 06 (does not settle the claim from memory), 09 (says the code is missing instead
-of inventing the architecture), 12 (no trailer in the suggested message), 17 (findings carry a severity and a
-`CPP-` rule ID, and the throw, detached thread, race or leak is Critical), 18 (pins behaviour before changing
-code, and keeps file order, BGR, dtype and the shared cache unless asked).
+Behaviour graders: 01 (a failing pytest test comes before the code), 02 (a GoogleTest reproduction and the root
+cause come before the fix), 03 (pins behaviour before changing code, and keeps file order, BGR, dtype and the
+shared cache unless asked), 04 (every named model carries a licence; no benchmark number from memory), 06 (asks
+for the brief; no number from memory), 07 (does not settle the claim from memory), 10 (clones into
+`research/<slug>/`, records the commit, runs nothing from the clone), 11 (findings carry a severity and a `CPP-`
+rule ID, and the throw, detached thread, race or leak is Critical), 12 (no trailer in the suggested message),
+14 (says the code is missing instead of inventing the architecture).
+
+Routing to agents, models and effort is not covered here: a read-only run cannot start an agent. Check it by hand
+with a real task and look at the `model` and `effort` on each Agent call.
 
 ## Layout
 

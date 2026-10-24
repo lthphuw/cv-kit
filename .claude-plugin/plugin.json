@@ -1,10 +1,10 @@
 {
   "name": "cv-kit",
-  "version": "0.2.0",
-  "description": "Skills, agents, hooks and rules for computer-vision engineers: model selection, embeddings and retrieval, sourced deep research, hand-drawn architecture figures, strict Python and edge C++ review, refactoring and lint setup, and git/SVN commit discipline.",
+  "version": "0.3.0",
+  "description": "Test-first development for Python and edge C++ with agents routed by task difficulty, evidence-backed computer-vision R&D, strict review, hand-drawn architecture figures, and git/SVN commit discipline.",
   "author": { "name": "Lương Thanh Hoàng Phú" },
   "homepage": "https://github.com/lthphuw/cv-kit",
   "repository": "https://github.com/lthphuw/cv-kit",
   "license": "MIT",
-  "keywords": ["computer-vision", "vlm", "object-detection", "embeddings", "research", "architecture-diagrams"]
+  "keywords": ["computer-vision", "tdd", "pytest", "googletest", "research", "code-review", "architecture-diagrams"]
 }
