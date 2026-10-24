@@ -124,6 +124,11 @@ def test_local_path_leak_fails(plugin):
     assert any("local path" in e for e in run_checks(plugin))
 
 
+def test_generated_eval_results_are_not_scanned(plugin):
+    write(plugin / "evals/results/2026-10-24/aggregate-result.json", '{"root": "/Users/someone/cv-kit"}\n')
+    assert run_checks(plugin) == []
+
+
 def test_windows_path_leak_fails(plugin):
     write(plugin / "shared/notes.md", "Saved to C:\\Users\\someone\\out.png.\n")
     assert any("notes.md" in e and "local path" in e for e in run_checks(plugin))

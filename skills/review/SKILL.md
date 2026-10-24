@@ -25,9 +25,11 @@ Facts read just now (a fact marked not found is not a finding):
 3. **Dispatch the `reviewer` agent** (`model` `opus`, `effort` `high`; `xhigh` for concurrency, memory safety or
    a numeric result the user will publish) with the file list or diff range and the tool output, never your own
    findings. For a large change, split by directory and run the reviewers in one message.
-4. **Report** in the format of `${CLAUDE_SKILL_DIR}/references/report-format.md`: findings most severe first, each
-   with a rule ID, an anchor, a trigger and the smallest fix; the verdict `Blocking: <n> Critical, <m> Major`; the
-   tools that did not run. Drop a duplicate; keep a severity change only with a `path:line` anchor.
+4. **Report** in the format of `${CLAUDE_SKILL_DIR}/references/report-format.md`, copied, not retold in prose. Each
+   finding opens with the line `[Severity] RULE-ID path:line` and is followed by What, Trigger and Fix lines; a defect
+   no catalogue rule covers opens `[Severity] no rule` and names the norm it rests on. Most severe first, then the
+   verdict `Blocking: <n> Critical, <m> Major` and the tools that did not run. For pasted code the anchor is
+   `snippet:<line>`. Drop a duplicate; keep a severity change only with a `path:line` anchor.
 5. **Complement the built-ins, do not copy them.** Claude Code's own `/code-review` and `/security-review` find
    correctness and security bugs in a diff; this skill adds the strict style catalogues, CV leakage and
    reproducibility checks, and a rule ID on each finding. Suggest them when the change is a pull request, never pass

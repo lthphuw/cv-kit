@@ -20,16 +20,16 @@ files offline on every run of the test suite.
 | `setup` | never (user-invoked only) | 17, 18 |
 | any cv-kit skill | | 19, 20 |
 
-Behaviour graders: 01 (a failing pytest test comes before the code), 02 (a GoogleTest reproduction and the root
-cause come before the fix), 03 (pins behaviour before changing code, and keeps file order, BGR, dtype and the
+Behaviour graders: 01 (a test file is edited before `vision/utils.py`, and the tests cover an empty result and a box
+outside the image), 02 (a test file is edited before `src/post/nms.cc`, and the reply names the cause it read), 03 (pins behaviour before changing code, and keeps file order, BGR, dtype and the
 shared cache unless asked), 04 (every named model carries a licence; no benchmark number from memory), 06 (asks
 for the brief; no number from memory), 07 (does not settle the claim from memory), 10 (clones into
 `research/<slug>/`, records the commit, runs nothing from the clone), 11 (findings carry a severity and a `CPP-`
 rule ID, and the throw, detached thread, race or leak is Critical), 12 (no trailer in the suggested message),
 14 (says the code is missing instead of inventing the architecture).
 
-Cases 21 and 22 grant the `Agent` tool and check routing: which agent is dispatched and with which `model`. They
-run read-only, so the dispatched agent cannot edit; the check is on the call. Confirm the model that actually ran
+Cases 21 and 22 grant the `Agent` tool and check routing: which agent is dispatched and with which `model`. The
+check is on the call, not on what the agent then does. Confirm the model that actually ran
 with `/tasks` in a live session. Eval runs load no `.claude/` folder or `CLAUDE.md`, so rules installed by `setup`
 are not active in them.
 
@@ -39,38 +39,61 @@ are not active in them.
 evals/
   NN-<skill or off-topic>-<fire|nofire>-<slug>/
     prompt.md          frontmatter: run limits and tools; body: the request
+    case.yaml          only when the prompt names files: points at fixture.sh
+    fixture.sh         writes those files into the empty workspace (runs with --scaffold)
     graders/
       <skill>-fired.md        tool_used: the Skill tool was called with this skill
       <skill>-not-called.md   tool_used with min 0, max 0, arm both: never called
       no-cv-kit-skill.md      no cv-kit skill was called
-      <rule>.md               an llm rubric or a regex on the final reply
+      <rule>.md               an llm rubric on the final reply, or a regex on the final reply or the trace
   results/             written by each run; git-ignored
 ```
 
-Every run starts in an empty folder with only `Read`, `Glob`, `Grep` and `Skill`: no web, no Bash, no writes.
-The cases therefore measure routing and the first reply, not a full research run or a built figure.
+Every run starts in a temporary folder with no `.claude/` and no `CLAUDE.md`. Cases whose prompt names files
+(01, 02, 21, 22) get them from `fixture.sh`; case 14 stays empty on purpose, because its reply must say the code is
+missing. The tools are `Read`, `Glob`, `Grep`, `Skill` and, in 21 and 22, `Agent`, plus what `scripts/run_evals.sh`
+grants: `Edit` and `Write` in the run's folder, and `Bash` for the plugin's own four scripts only. No run has a test
+runner, a compiler, a browser or the network, so nothing is built or executed and no research is fetched. The cases
+measure routing and what the first reply and the first edits do.
 
 ## Run it
 
-From the repository root, with Claude Code 2.1.269 or later:
+From the repository root, with Claude Code 2.1.310 or later:
 
 ```
-claude plugin eval . --ablation none --model <model to release against> --judge-model sonnet \
-  --no-publish --max-cost-usd <ceiling>
+scripts/run_evals.sh --model <model to release against> --max-cost-usd <ceiling>
 ```
 
-- `--ablation none` runs only the with-plugin arm. Under the default two-arm mode, `<skill>-fired` graders are
-  shown as indicators and left out of the score, so use one arm to measure trigger rates. Add the no-plugin arm
-  (`--ablation with-without`) only to see what the plugin adds to the behaviour graders.
-- `--model` pins the model under test, so a model rollout is not read as a plugin change.
-- `--judge-model sonnet` grades the six `llm` rubrics with a larger judge than the default.
-- `--no-publish` keeps the HTML report local. Without it the report is published to claude.ai when the account
-  allows it.
-- `--max-cost-usd` stops starting new runs once the estimate passes the ceiling (exit 2, partial results). The
-  cost of a full run of this suite has not been measured yet; set a low ceiling for the first run.
-- Each case runs three times. A case passes only when every grader passes in every run (the default
-  `--threshold` is 1.0); read the per-case scores, not only the exit code.
-- To try one case once: `claude plugin eval . --case 05-* --runs 1 --ablation none --no-publish`.
+Do not run a bare `claude plugin eval`. An eval run removes `Bash` unless the operator grants it, and a skill's own
+`allowed-tools` cannot widen that. `develop`, `review` and `commit` read project facts with a `!` command, so without
+the grant their `Skill` call returns `Permission to use Bash has been denied` and the skill body never loads. The
+`<skill>-fired` grader still passes, and every behaviour grader then measures the model alone. The first full run of
+this suite (2026-10-24, bare command) showed exactly that: the `develop` and `review` behaviour cases 02, 03, 11 and
+21 scored the same with and without the plugin.
+
+What the script sets, and why:
+
+- `--allow-tools "Bash(python3 <repo>/scripts/project_facts.py *)" ...` grants only the four scripts the skills call,
+  and `Edit Write` so `develop` can write its test first. Bash then runs in Claude Code's OS sandbox.
+- `--scaffold` runs each `fixture.sh`. Without it, cases 01, 02, 21 and 22 start empty and the model correctly says
+  the file is not there.
+- `--judge-model sonnet` judges the six `llm` rubrics. The default haiku gave unanimous FAIL on a correct reply
+  (04) and split votes on the same reply (14).
+- `--ablation none` runs only the with-plugin arm. Under the default two-arm mode, `<skill>-fired` graders are shown
+  as indicators and left out of the score. Add `--ablation with-without` to see what the plugin adds to the behaviour
+  graders: Δ near zero on a case whose `-fired` indicator passes means the skill loaded but changed nothing, or did
+  not load.
+- `--no-publish` keeps the HTML report local.
+
+Further flags pass through and win over the defaults. `--max-cost-usd` stops starting new runs once the estimate
+passes the ceiling (exit 2, partial results). The first two-arm run (132 runs) cost $15.21; the cost of each run is
+in `evals/results/<time>/aggregate-result.json`.
+
+- Each case runs three times. A case passes only when every grader passes in every run (the default `--threshold`
+  is 1.0); read the per-case scores, not only the exit code.
+- To try one case once: `scripts/run_evals.sh --case '05-*' --runs 1`.
+- To read what a run did, add `--keep-temp` and open the `trace.jsonl` it prints. A `Skill` result with
+  `is_error: true` is a skill that did not load.
 - The first run in this directory asks whether to trust it.
 
 ## Why not in CI

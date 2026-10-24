@@ -26,3 +26,14 @@ A refactor changes structure, not behaviour. The recipes and rule IDs are in the
      again before saying it is faster or no slower.
 5. **Finish.** Report the steps with their recipe and rule IDs, the commands and results, what was left and why,
    and anything whose behaviour may differ, with the evidence that it does not. Offer a review of the result.
+
+## Code pasted in the chat
+
+There is no file to edit and no test to run, so the order of the reply is the order of the steps:
+
+1. What must not change, as a list: public names, signatures and defaults, output values, dtype and channel order,
+   file order, shared or cached state.
+2. The characterisation test that pins it, written to run against the code as pasted. Mark what was not run.
+3. Only then the rewritten code. Keep every name, signature and default as pasted; a rename or a fix to a mutable
+   default is a decision for the user, listed after the code, not made in it.
+4. No `# noqa`, `# type: ignore` or `// NOLINT` in the rewrite.

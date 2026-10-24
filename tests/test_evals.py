@@ -44,6 +44,45 @@ REGEX_SAMPLES = {
         ["refactor: rename load_weights to load_checkpoint", "I left out any Co-Authored-By trailer.",
          "No Signed-off-by line, as the project asks."],
     ),
+    "tests-written": (
+        ['{"type":"tool_use","name":"Edit","input":{"file_path":"/w/tests/test_utils.py","old_string":"a"}}',
+         '{"type":"tool_use","name":"Edit","input":{"replace_all":false,"file_path":"/w/tests/test_utils.py"}}',
+         '{"type":"tool_use","name":"Write","input":{"file_path":"/w/tests/nms_test.cc","content":"x"}}'],
+        ['{"type":"tool_use","name":"Edit","input":{"file_path":"/w/vision/utils.py","old_string":"a"}}',
+         '{"type":"tool_use","name":"Read","input":{"file_path":"/w/tests/test_utils.py"}}'],
+    ),
+    "test-before-code": (
+        # the production file is edited with no edit of a test before it: the grader fails the run
+        ['{"name":"Read","input":{"file_path":"/w/tests/test_utils.py"}}\n'
+         '{"name":"Edit","input":{"file_path":"/w/vision/utils.py"}}\n'
+         '{"name":"Edit","input":{"file_path":"/w/tests/test_utils.py"}}',
+         '{"name":"Edit","input":{"replace_all":false,"file_path":"/w/vision/utils.py","old_string":"a"}}\n'
+         '{"name":"Edit","input":{"replace_all":false,"file_path":"/w/tests/test_utils.py"}}',
+         '{"name":"Write","input":{"file_path":"/w/vision/utils.py"}}'],
+        # a test is edited first, or the production file is never edited: the grader passes the run
+        ['{"name":"Edit","input":{"file_path":"/w/tests/test_utils.py"}}\n'
+         '{"name":"Edit","input":{"file_path":"/w/vision/utils.py"}}',
+         '{"name":"Edit","input":{"replace_all":false,"file_path":"/w/tests/test_utils.py"}}\n'
+         '{"name":"Edit","input":{"replace_all":false,"file_path":"/w/vision/utils.py"}}',
+         '{"name":"Read","input":{"file_path":"/w/vision/utils.py"}}\n'
+         '{"name":"Edit","input":{"file_path":"/w/tests/test_utils.py"}}'],
+    ),
+    "test-before-fix": (
+        ['{"name":"Edit","input":{"file_path":"/w/src/post/nms.cc"}}\n'
+         '{"name":"Edit","input":{"file_path":"/w/tests/nms_test.cc"}}',
+         '{"name":"Edit","input":{"replace_all":false,"file_path":"/w/src/post/nms.cc"}}'],
+        ['{"name":"Edit","input":{"file_path":"/w/tests/nms_test.cc"}}\n'
+         '{"name":"Edit","input":{"file_path":"/w/src/post/nms.cc"}}',
+         '{"name":"Read","input":{"file_path":"/w/src/post/nms.cc"}}'],
+    ),
+    "nothing-run-from-clone": (
+        ['{"type":"tool_use","name":"Bash","input":{"command":"cd research/x/repos/y && pytest -q","description":"d"}}',
+         '{"type":"tool_use","name":"Bash","input":{"command":"pip install -e research/x/repos/y"}}',
+         '{"type":"tool_use","name":"Bash","input":{"command":"cmake -S research/x/repos/y -B b"}}'],
+        ['{"type":"tool_use","name":"Bash","input":{"command":"python3 /p/scripts/research_workspace.py init deimv2"}}',
+         '{"type":"tool_use","name":"Bash","input":{"command":"curl -sL -o research/x/sources/p.xml http://a"}}',
+         '{"type":"tool_use","name":"Read","input":{"file_path":"/w/research/x/repos/y/setup.py"}}'],
+    ),
 }
 
 
@@ -204,7 +243,8 @@ def test_every_skill_has_a_fire_and_a_no_fire_case():
 def test_patterns_match_only_their_own_skill():
     for case in pattern_cases():
         for sample, want in case["samples"]:
-            got = bool(re.search(case["pattern"], sample, re.I if "i" in case["flags"] else 0))
+            flags = (re.I if "i" in case["flags"] else 0) | (re.S if "s" in case["flags"] else 0)
+            got = bool(re.search(case["pattern"], sample, flags))
             assert got == want, f"{case['where']}: {sample!r} should {'' if want else 'not '}match"
 
 
@@ -260,6 +300,73 @@ def test_agent_routing_graders_match_only_the_right_call(name):
     front, _ = split(path)
     assert front["type"] == "tool_used" and front["tool"] == "Agent"
     hits, misses = AGENT_SAMPLES[name]
+    for sample in hits:
+        assert re.search(front["input_match"], sample), sample
+    for sample in misses:
+        assert not re.search(front["input_match"], sample), sample
+
+
+FIXTURE_CASES = sorted(p for p in CASES if (p / "fixture.sh").exists())
+# Cases whose prompt names a file on purpose: the run starts in an empty folder and the reply must say it is missing.
+EMPTY_ON_PURPOSE = {"14-figure-fire-detector-docs"}
+# Cases whose prompt mentions a path only as part of what the user describes; nothing has to read it.
+PATH_ONLY_DESCRIBED = {"12-commit-fire-message"}
+PATH_IN_PROMPT = re.compile(r"(?<![\w/.])((?:[\w.-]+/)+[\w.-]+\.(?:py|cc|cpp|h|hpp|yaml|yml|txt|toml))\b")
+
+
+def test_fixture_cases_have_a_case_yaml_that_names_the_script():
+    for case in FIXTURE_CASES:
+        data = yaml.safe_load((case / "case.yaml").read_text(encoding="utf-8"))
+        assert data["schema_version"] == "1.1" and data["name"] == case.name, case.name
+        assert data["context"]["scaffold_script"] == "fixture.sh", case.name
+    for case in CASES:
+        has_yaml = (case / "case.yaml").exists()
+        assert has_yaml == (case / "fixture.sh").exists(), f"{case.name}: case.yaml and fixture.sh go together"
+
+
+@pytest.mark.parametrize("case", CASES, ids=lambda p: p.name)
+def test_every_file_the_prompt_names_exists_after_the_fixture(case, tmp_path):
+    _, body = split(case / "prompt.md")
+    named = sorted(set(PATH_IN_PROMPT.findall(body)))
+    if case.name in EMPTY_ON_PURPOSE:
+        assert not (case / "fixture.sh").exists(), "an empty-on-purpose case must not seed files"
+        return
+    if not named or case.name in PATH_ONLY_DESCRIBED:
+        return
+    assert (case / "fixture.sh").exists(), f"{case.name}: the prompt names {named} but nothing creates them"
+    done = subprocess.run(["bash", str(case / "fixture.sh")], cwd=tmp_path, capture_output=True, text=True,
+                          check=False)
+    assert done.returncode == 0, done.stderr
+    missing = [p for p in named if not (tmp_path / p).exists()]
+    assert not missing, f"{case.name}: the fixture does not create {missing}"
+
+
+def test_run_script_grants_what_the_skills_need():
+    script = (ROOT / "scripts" / "run_evals.sh").read_text(encoding="utf-8")
+    assert "--scaffold" in script and "--allow-tools" in script
+    for skill in ROOT.glob("skills/*/SKILL.md"):
+        front, body = split(skill)
+        for token in re.findall(r"Bash\(python3 \$\{CLAUDE_PLUGIN_ROOT\}/([\w/.]+) \*\)", str(front.get("allowed-tools", ""))):
+            assert f"$root/{token} *" in script, f"{skill.parent.name} allows {token}; run_evals.sh does not grant it"
+
+
+BASH_SAMPLES = {
+    "workspace-created": (
+        ['{"command":"python3 /p/scripts/research_workspace.py init deimv2-loss-check && ls"}',
+         '{"command":"python3 \\"/p/scripts/research_workspace.py\\" init deimv2-loss-check"}',
+         '{"command":"python3 /p/scripts/research_workspace.py clone deimv2 https://github.com/a/b --ref main"}'],
+        ['{"command":"ls research"}', '{"command":"python3 /p/scripts/lint_research.py research/x"}',
+         '{"command":"python3 /p/scripts/research_workspace.py --help"}'],
+    ),
+}
+
+
+@pytest.mark.parametrize("name", sorted(BASH_SAMPLES))
+def test_bash_graders_match_only_the_right_call(name):
+    path = next(p for p in GRADERS if p.stem == name)
+    front, _ = split(path)
+    assert front["type"] == "tool_used" and front["tool"] == "Bash"
+    hits, misses = BASH_SAMPLES[name]
     for sample in hits:
         assert re.search(front["input_match"], sample), sample
     for sample in misses:

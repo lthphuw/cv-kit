@@ -1,6 +1,6 @@
 ---
 name: research
-description: Use when a model, method, library or claim must be chosen, compared or checked with evidence, such as picking a detector, segmenter, encoder or VLM for a task, budget and licence; SOTA or paper comparisons; embeddings, CLIP/SigLIP/DINO retrieval; whether a README, paper or model-card number is right; or any R&D that needs papers and reference code downloaded and cross-checked.
+description: Use when a model, method, library or claim must be chosen, compared or checked with evidence, such as picking a detector, segmenter, encoder or VLM for a task, budget and licence; SOTA or paper comparisons; embeddings and similarity search (how to compute, normalise and index CLIP/SigLIP/DINO features, FAISS); whether a README, paper or model-card number is right; or any R&D that needs papers and reference code downloaded and cross-checked.
 argument-hint: "[question, model, paper or claim]"
 allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/research_workspace.py *) Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/lint_research.py *)
 ---

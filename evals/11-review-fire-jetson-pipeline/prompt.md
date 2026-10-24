@@ -2,7 +2,8 @@
 description: A review request for edge C++ code goes to review, and the first reply cites rule IDs with severities.
 expected_outcome: review fires; develop does not; findings carry a severity and a CPP- rule ID.
 tags: [trigger, fire, behaviour]
-max_turns: 16
+max_turns: 30
+timeout_seconds: 600
 allowed_tools: [Read, Glob, Grep, Skill]
 ---
 

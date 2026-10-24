@@ -1,13 +1,16 @@
 ---
 type: llm
+focus:
+  source: file
+  path: tests/nms_test.cc
 ---
 
-Work through each point and quote the words of the reply that decide it.
+This is the GoogleTest file after the run. The run could not build or run it. Work through each point and quote the
+lines that decide it.
 
-1. Does the reply say it will reproduce the crash with a failing test (GoogleTest, `TEST` or `TEST_F`) before it
-   changes `nms.cc`?
-2. Does the reply look for the root cause (reading the code or the crash) instead of guessing a fix?
-3. Does the reply claim to have fixed the crash without having run a test?
+1. Is there a `TEST` or `TEST_F` that calls `Nms` with no boxes and no scores?
+2. Does it expect an empty result, and does it avoid asserting anything that depends on a crash?
+3. Are the two original tests still there, unchanged?
 
-PASS if the answers to 1 and 2 are yes and the answer to 3 is no.
+PASS if all three answers are yes.
 FAIL otherwise.

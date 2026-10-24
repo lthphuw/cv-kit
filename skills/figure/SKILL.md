@@ -32,10 +32,12 @@ internals into one box, drop side outputs, then split into an overview and one d
 
 ## Workflow
 
-1. **Ask and plan.** Before drawing, read `${CLAUDE_SKILL_DIR}/references/guide.md`: ask only the questions whose
-   answer changes the figure, in one message, with defaults; give the mode, canvas, boxes, and what you merge or leave
-   out.
-2. **Read the facts** from the model code and configs; note the file each shape, count and name comes from.
+1. **Read the facts** from the model code and configs the user named; note the file each shape, count and name comes
+   from. If you cannot read them (the path is wrong, or the code is not in the project), say so, ask for the path or
+   the facts, and stop: give no block, layer name, shape or count, not even as an example or a draft plan.
+2. **Ask and plan.** Read `${CLAUDE_SKILL_DIR}/references/guide.md`, then ask only the questions whose answer changes
+   the figure, in one message, with defaults; give the mode, canvas, boxes, and what you merge or leave out, every box
+   taken from what you read in step 1.
 3. **Start from the starter.** Copy it from `${CLAUDE_SKILL_DIR}/templates/` to the output folder as
    `<name>.figure.js`, keep `FIGURE` and `draw(k)`, and put the sources and build command in the header comment. For
    a whole-model, notes or translated edition read `${CLAUDE_SKILL_DIR}/references/house-style.md`; every helper,

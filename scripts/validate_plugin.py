@@ -33,6 +33,8 @@ AGENT_MODELS = {"inherit", "haiku", "sonnet", "opus", "fable", "claude-haiku-5-5
 AGENT_EFFORTS = {"low", "medium", "high", "xhigh", "max"}
 CATALOG_STATUS = {"verified", "UNVERIFIED"}
 SCAN_PATHS = ["skills", "agents", "hooks", "rules", "shared", "evals", ".claude-plugin", "README.md"]
+# Written by every local eval run (git-ignored): traces and reports hold the machine's own paths.
+SCAN_SKIP = ("evals/results",)
 SCAN_SUFFIXES = {".md", ".json", ".py", ".sh", ".yml", ".yaml", ".js", ".html"}
 
 
@@ -289,6 +291,8 @@ def check_local_paths(root: Path) -> list[str]:
         base = root / name
         files = [base] if base.is_file() else sorted(base.rglob("*")) if base.is_dir() else []
         for file in files:
+            if any(file.relative_to(root).as_posix().startswith(skip + "/") for skip in SCAN_SKIP):
+                continue
             if file.is_file() and file.suffix in SCAN_SUFFIXES and LOCAL_PATH_RE.search(file.read_text(encoding="utf-8")):
                 errors.append(f"{file}: contains a local path")
     return errors
