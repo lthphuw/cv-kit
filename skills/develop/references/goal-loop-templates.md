@@ -1,8 +1,8 @@
-# Unattended runs: /goal and /loop
+# Templates: /goal and /loop lines
 
 `/goal` is a built-in command, and `/loop` is a bundled skill that ends a stack of skills, so neither is stacked
 with a cv-kit skill in one message. Name the skill in the condition or prompt, or run the skill first and set the goal
-afterwards.
+afterwards. Copy one line and change the bracketed parts.
 
 ## /goal: work until a check passes
 
@@ -30,6 +30,16 @@ can end the loop. It runs skills the model may invoke, so `/cv-kit:setup` (manua
 ```
 /loop 30m /cv-kit:review the diff against main, report only new Critical or Major findings
 /loop 10m run `pytest -q` and `ctest --test-dir build`; if either fails, find the root cause with /cv-kit:develop and stop to report it
+/loop 15m first run `test -f .cv-kit-stop` and stop if it exists; otherwise /cv-kit:review the diff against main, report only new Critical or Major findings, change nothing
+```
+
+## Headless run (`claude -p`)
+
+For work that runs while nobody watches. The goal runs to completion in one invocation; the log keeps each message.
+Set the permissions in advance (`/cv-kit:setup`); a headless run cannot answer a prompt.
+
+```
+claude -p "/goal follow /cv-kit:develop. clamp_boxes in vision/utils.py clips xyxy boxes; a new pytest test failed first, then `pytest -q` exits 0. Do not commit. Or stop after 15 turns." --output-format stream-json --verbose > /tmp/cv-kit-clamp-boxes.log 2>&1
 ```
 
 A loop that only watches should say so ("report, change nothing"); a loop that edits files needs a clean tree or a

@@ -43,6 +43,14 @@ The hook and the `commit` skill stop a trailer in a message the agent writes. Cl
 - `includeCoAuthoredBy` is deprecated since Claude Code v2.0.62. It is ignored once `attribution.commit` or `attribution.pr` is set.
 - Managed settings can override your own rules. Claude Code tells Claude that your CLAUDE.md or memory instructions about attribution take precedence, unless the line is set in managed settings. If an administrator set `attribution` there, a rule in your project or in this plugin may not win.
 
+## Concise mode
+
+`concise.py` listens to `SessionStart` (startup, resume, clear, compact) and `SubagentStart`. It adds `concise.md` as
+context, so replies and code stay short in every session and every subagent. It only adds context: it never blocks,
+and any error means the session starts without it. The rules are adapted from ponytail (MIT, copyright (c) 2026
+DietrichGebert): the decision ladder, the `shortcut:` comment and the never-cut list. To change the rules, edit
+`concise.md`; to switch them off, remove the two entries from `hooks.json`.
+
 ## Evidence gate
 
 `evidence_gate.py` listens to `PostToolUse`, `PostToolUseFailure`, `Stop` and `SubagentStop` (only for

@@ -1,6 +1,6 @@
 ---
 name: develop
-description: Use when writing, fixing, refactoring, testing or scoping code in Python or C++ (computer vision or not), or finding where code reads or uses something before a change, before touching any code. Applies test-first, systematic debugging, simplicity and evidence, and sends the work to agents with a model and effort sized to the task.
+description: Use when writing, fixing, refactoring, testing or scoping code in Python or C++ (computer vision or not), or finding where code reads or uses something before a change, before touching any code, or writing the /goal or /loop line for unattended work. Applies test-first, systematic debugging, simplicity and evidence, and sends the work to agents with a model and effort sized to the task.
 argument-hint: "[feature, bug or goal]"
 allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project_facts.py *) Bash(python3 ${CLAUDE_PLUGIN_ROOT}/hooks/evidence_gate.py *)
 ---
@@ -79,5 +79,22 @@ When the prompt came from `/goal <condition>` or a `/loop`, nobody is there to a
 condition and do not ask; if it leaves out something that changes the result, state your assumption and go on.
 `/goal`'s judge reads only the transcript, so end every turn with the literal output of the check (test summary,
 exit status, linter result), not a description of it. Never commit or push, and never run code from a cloned repo,
-unless the condition says so. After two failed fixes stop and report what the evidence shows. Condition templates
-are in `${CLAUDE_SKILL_DIR}/references/unattended.md`.
+unless the condition says so. After two failed fixes stop and report what the evidence shows.
+
+**Writing the line.** When asked to write a `/goal` or `/loop` line, change no code: write one fenced block for the user
+to paste, then stop. Use the facts above for the check; "not found" means look yourself.
+
+1. **Pick the mode.** A finite task with a checkable end (fix, feature, migration, backlog): `/goal`. Something to repeat
+   or watch on an interval: `/loop`. Say which, and why, in one line.
+2. **Set the end state.** One measurable outcome and the command that proves it. A vague task gets your assumption
+   stated inside the line; nobody is there to answer.
+3. **Bound it.** End with `Or stop after N turns` (fix 15, feature 25, research 30), and add
+   `After two failed fixes, stop and report the literal output.`
+4. **Constrain it.** Name what must not change: other test files, `no commit`, `no push`, no code run from a clone.
+5. **Loops.** Start with `first run test -f .cv-kit-stop and stop if it exists`, so `touch .cv-kit-stop` halts it.
+   A watch-only loop says `change nothing`.
+6. **Headless, only if the user will be away.** Give `claude -p "/goal ..." --output-format stream-json --verbose` with a
+   log path outside the repo. Permissions must be set in advance (`/cv-kit:setup`).
+7. **Size.** At most 4,000 characters. Keep tests in the foreground: a background run defers the judge.
+
+Output: the block, then `Paste it after /goal or /loop, in auto mode.` Examples: `${CLAUDE_SKILL_DIR}/references/goal-loop-templates.md`.

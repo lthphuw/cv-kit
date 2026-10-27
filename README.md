@@ -52,6 +52,8 @@ Choose the right scenario, skill, and automation mode (Interactive, Goal-driven,
     with /cv-kit:develop and stop to report it
   ```
 
+  Not sure how to write the line? `/cv-kit:develop write the /goal line for the NMS crash` writes it and changes no code.
+
 <details>
 <summary>More development prompts</summary>
 
@@ -283,6 +285,7 @@ Choose the right scenario, skill, and automation mode (Interactive, Goal-driven,
 | Agent | `lead` | Opus, high effort — optional orchestrator that only delegates |
 | Hook | `block_trailers.py` | Refuses a commit message with a trailer |
 | Hook | `evidence_gate.py` | Blocks a turn if code changed but no test passed |
+| Hook | `concise.py` | Keeps replies and code short in every session and subagent (rules adapted from ponytail, MIT) |
 
 Models use aliases and follow the newest version your provider offers. To pin one, set a full model ID in the agent's `model` field.
 

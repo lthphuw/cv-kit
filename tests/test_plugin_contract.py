@@ -102,6 +102,11 @@ class TestSkills:
         text = (ROOT / "skills/develop/SKILL.md").read_text(encoding="utf-8")
         assert "/goal" in text and "/loop" in text
 
+    def test_develop_writes_goal_loop_and_headless_lines(self):
+        text = (ROOT / "skills/develop/SKILL.md").read_text(encoding="utf-8")
+        for needle in ("/goal", "/loop", "claude -p", "4,000", ".cv-kit-stop", "Or stop after", "change no code"):
+            assert needle in text, needle
+
     def test_setup_offers_the_commit_guard_settings(self):
         text = (ROOT / "skills/setup/references/settings.md").read_text(encoding="utf-8")
         for needle in ("permissions", "ask", "Bash(git commit *)", "Bash(git push *)", "attribution"):
