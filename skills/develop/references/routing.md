@@ -17,6 +17,10 @@ every agent's `model`, so unset it if routing seems ignored.
 
 A task is Hard when any one sign holds. When unsure, take the higher level: a wrong cheap run costs a second run.
 
+Review follows the same levels. A Hard change, or one touching numerics, security or a published number, gets `reviewer`
+at `opus`, high. A Routine change whose tests and linters pass gets `reviewer` at `sonnet`, medium. A one-line change
+gets no reviewer; its test output is the check.
+
 ## Rules
 
 - One concern per agent. A plan with a test, a fix and a review is three calls, in order.
