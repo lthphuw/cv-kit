@@ -27,7 +27,7 @@ Treat a fact above as true only for what it says; "not found" means look yoursel
 
 1. **Size it.** A clear one-line change: do it. New or vague: read `${CLAUDE_SKILL_DIR}/references/scoping.md`, ask one question at a time, write the brief back, and wait for a yes before code.
 2. **Look first.** Read the project's rules and test setup, then run the existing tests for a baseline.
-3. **Red, green, refactor**: by you for a one-line change, otherwise by the `engineer` you brief. Read the test reference that applies before the first test: `${CLAUDE_SKILL_DIR}/references/python-testing.md` (pytest) or `cpp-testing.md` (GoogleTest). Refactors follow `refactor.md`. `/simplify` is an optional last pass once the tests are green.
+3. **Red, green, refactor**: by you for a one-line change, otherwise by the `engineer` you brief. Read the test reference that applies before the first test: `${CLAUDE_SKILL_DIR}/references/python-testing.md` (pytest), `cpp-testing.md` (GoogleTest) or `go-testing.md` (`go test`). Refactors follow `refactor.md`. `/simplify` is an optional last pass once the tests are green.
 4. **Verify.** Run the tests and linters. Then review by the risk rules in "Route the work"; a one-line change needs no reviewer, because its test output is the check. Give the reviewer the diff and the tool output, not your conclusions. End with the report: for a bug, the cause in one sentence with `path:line`; the tests added, by name, and what each pins; the change; and the literal output of each command, or that it did not run and why.
 5. **Commit** only when asked, through `/cv-kit:commit`.
 

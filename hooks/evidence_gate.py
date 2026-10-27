@@ -22,7 +22,7 @@ import time
 from pathlib import Path
 
 CODE_SUFFIXES = {".py", ".pyi", ".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx", ".cu", ".cuh", ".inl",
-                 ".ipp", ".cmake"}
+                 ".ipp", ".cmake", ".go"}
 CODE_NAMES = {"CMakeLists.txt"}
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit"}
 RUNNERS = {"pytest", "py.test", "tox", "nox", "ctest", "unittest"}

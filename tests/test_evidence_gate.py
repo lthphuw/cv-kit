@@ -65,6 +65,11 @@ class TestVerdict:
         gate.arm(SID, state)
         assert run(state, edit("src/a.py"), bash("pytest -q"), stop()) is None
 
+    def test_a_go_edit_needs_a_go_test_run(self, state):
+        gate.arm(SID, state)
+        assert run(state, edit("pkg/a.go"), stop())["decision"] == "block"
+        assert run(state, edit("pkg/a.go"), bash("go test -race ./..."), stop()) is None
+
     def test_a_failed_test_run_blocks_and_says_it_failed(self, state):
         gate.arm(SID, state)
         reply = run(state, edit("src/a.py"), bash("pytest -q", event="PostToolUseFailure"), stop())

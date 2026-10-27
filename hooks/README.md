@@ -57,7 +57,7 @@ DietrichGebert): the decision ladder, the `shortcut:` comment and the never-cut 
 `cv-kit:engineer`). It does nothing until the `develop` skill arms it for the session. Once armed it keeps a ledger
 under `~/.cache/cv-kit/gate/` (set `CV_KIT_GATE_DIR` to move it, delete it any time):
 
-- An edit to a code file (`.py`, `.cc`, `.cpp`, `.h`, `.hpp`, `.cu`, `CMakeLists.txt` and similar) makes any earlier
+- An edit to a code file (`.py`, `.go`, `.cc`, `.cpp`, `.h`, `.hpp`, `.cu`, `CMakeLists.txt` and similar) makes any earlier
   green test run stale. Docs and data files do not count.
 - A Bash command counts as a green run only if it is a test command (`pytest`, `ctest`, `tox`, `make test`,
   `go test`, `cargo test`, a `*_test` binary) that exited 0 and whose exit status is trustworthy: not piped

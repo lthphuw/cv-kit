@@ -65,7 +65,8 @@ def _has_files(path: Path, patterns: tuple[str, ...]) -> bool:
 def _project_facts(path: Path) -> list[str]:
     python = (path / "pyproject.toml").exists() or (path / "setup.py").exists() or _has_files(path, ("*.py", "*/*.py"))
     cpp = (path / "CMakeLists.txt").exists() or _has_files(path, ("*.cc", "*.cpp", "src/*.cc", "src/*.cpp"))
-    languages = [name for name, present in (("Python", python), ("C++", cpp)) if present]
+    go = (path / "go.mod").exists() or _has_files(path, ("*.go", "*/*.go"))
+    languages = [name for name, present in (("Python", python), ("C++", cpp), ("Go", go)) if present]
     lines = ["Languages: " + (", ".join(languages) if languages else "none detected")]
     if python:
         pytest = (path / "conftest.py").exists() or (path / "tests" / "conftest.py").exists() or any(
@@ -77,6 +78,9 @@ def _project_facts(path: Path) -> list[str]:
         ctest = re.search(r"enable_testing|include\(CTest\)", cmake) is not None
         parts = [name for name, present in (("GoogleTest referenced", gtest), ("ctest enabled", ctest)) if present]
         lines.append("C++ tests: " + (", ".join(parts) if parts else "no GoogleTest or ctest found"))
+    if go:
+        tests = _has_files(path, ("*_test.go", "*/*_test.go"))
+        lines.append("Go tests: _test.go files present" if tests else "Go tests: no _test.go files found")
     rules = path / ".claude" / "rules"
     count = len(list(rules.glob("*.md"))) if rules.is_dir() else 0
     lines.append(f"Project rules: {count} file{'s' if count != 1 else ''} in .claude/rules" if count

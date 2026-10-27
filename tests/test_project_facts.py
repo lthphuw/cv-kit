@@ -87,6 +87,17 @@ class TestProject:
         (tmp_path / "CMakeLists.txt").write_text("project(x)\n")
         assert "C++ tests: no GoogleTest or ctest found" in facts(tmp_path)
 
+    def test_go_with_test_files(self, tmp_path):
+        (tmp_path / "go.mod").write_text("module example.com/x\n\ngo 1.22\n")
+        (tmp_path / "a_test.go").write_text("package x\n")
+        text = facts(tmp_path)
+        assert "Languages: Go" in text
+        assert "Go tests: _test.go files present" in text
+
+    def test_go_without_tests_says_so(self, tmp_path):
+        (tmp_path / "go.mod").write_text("module example.com/x\n")
+        assert "Go tests: no _test.go files found" in facts(tmp_path)
+
     def test_nothing_detected_is_stated_not_guessed(self, tmp_path):
         assert "Languages: none detected" in facts(tmp_path)
 

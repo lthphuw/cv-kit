@@ -1,6 +1,6 @@
 # cv-kit
 
-A Claude Code plugin for computer-vision engineers who write Python and edge C++. It turns an engineering question into
+A Claude Code plugin for computer-vision engineers who write Python, edge C++ and Go. It turns an engineering question into
 a tested change, a sourced model comparison, a review or a figure, and keeps the evidence in the repository.
 
 - **Who it is for:** engineers who train, evaluate or deploy vision models, and write the code around them: data
@@ -137,7 +137,7 @@ The projects below are illustrative. Each row separates what the plugin does tod
 ## Configuration
 
 - **Project rules and lint.** `/cv-kit:setup` copies `rules/*.md` into `.claude/rules/` and the ruff, mypy, clang-format,
-  clang-tidy and CMake files into the project. It never overwrites an existing file and never edits `CLAUDE.md`. It
+  clang-tidy and CMake files into the project. It never overwrites an existing file and never edits `CLAUDE.md`. Go rules are copied the same way; no Go lint config is shipped, because `gofmt` and `go vet` need none. It
   offers commit-guard permissions and merges them into `.claude/settings.json` only after your yes.
 - **Refresh rules.** From a clone of this repo, `python3 scripts/install_rules.py <project> --force` overwrites the copied rules.
 - **Models.** Agents use the aliases `haiku`, `sonnet` and `opus`. To pin a version, set a full model ID in an agent's
@@ -159,8 +159,8 @@ The projects below are illustrative. Each row separates what the plugin does tod
 ## Reference and development
 
 - **Maintained references in this repo:** `shared/catalog.md` (models), `shared/metrics.md` (metric definitions and the
-  latency protocol), `shared/licenses.md`, `shared/sources.md`, the style catalogues `shared/python-style.md` and
-  `shared/cpp-style.md`, `hooks/README.md`, and `evals/README.md`.
+  latency protocol), `shared/licenses.md`, `shared/sources.md`, the style catalogues `shared/python-style.md`,
+  `shared/cpp-style.md` and `shared/go-style.md`, `hooks/README.md`, and `evals/README.md`.
 - **Design research notes:** `docs/research/` records the sources consulted, their licences and what was adopted.
 - **Set up for development:**
 
@@ -186,4 +186,4 @@ MIT. See `LICENSE`.
 
 The models in the catalogue have their own licences; check them before use. The style catalogues paraphrase the Google
 Python and C++ Style Guides (CC BY 3.0), take ideas from the C++ Core Guidelines, and pitfalls from methylDragon's coding
-notes (BSD-2-Clause). The figure skill bundles rough.js 4.6.6 (MIT) and the Patrick Hand font (SIL OFL 1.1).
+notes (BSD-2-Clause). The Go catalogue also draws on the Go documentation (BSD-3-Clause; CC BY 4.0 for the site pages) and the uber-go guide (Apache-2.0), and uses goleak (MIT) as a test-only check. The figure skill bundles rough.js 4.6.6 (MIT) and the Patrick Hand font (SIL OFL 1.1).
