@@ -40,3 +40,11 @@ the STATUS line in `hooks/concise.md` (every session and subagent), the Progress
 `hooks/progress.md` (added at `SessionStart` only, so subagents carry none of it), and a section in `hooks/README.md`.
 At review the rules were taken out of `agents/*.md`, `skills/develop` and `agents/lead.md`, where they repeated the
 hook, and the elapsed time was dropped from the Progress header: the main thread has no clock, the live rows show it.
+
+## Row redesign (2026-11-03)
+
+The user could not see a row's effort. S1, re-read on 2026-11-03 (`curl` of `statusline.md`, section "Task fields"),
+lists `effort` (`low` to `max`, or a numeric token budget; omitted when unset), `contextWindowSize` and `tokenSamples`,
+and says `content` renders ANSI colours as-is. Of three mock-ups (effort meter, effort as a word, meter plus a token
+sparkline) the user chose the meter: `● engineer  sonnet  ▰▰▱▱▱  4m12s  1.2k  <label>`, with a status icon, columns
+aligned across rows, finished rows dimmed, and `NO_COLOR` honoured. `contextWindowSize` and `tokenSamples` are unused.

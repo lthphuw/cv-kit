@@ -75,10 +75,18 @@ Two features show progress without the user asking, and suggest what to type nex
 
 **Live rows.** `settings.json` at the plugin root sets `subagentStatusLine` (a plugin may set only `agent` and
 `subagentStatusLine`). Claude Code runs `agent_status.py` on each refresh tick with the visible subagents as JSON on
-stdin (about every 5 s) and replaces each row with `engineer · sonnet · 4m12s · 1.2k tok · running · <label>`, cut to
-the row width. The label is the
-progress summary Claude Code has, else the task description. The clock shows only while the task runs, because a
-finished task has no end time. The script uses only the standard library and never fails: on any error it prints
+stdin (about every 5 s) and replaces each row with aligned columns, cut to the row width:
+
+```
+● engineer        sonnet  ▰▰▱▱▱  4m12s  1.2k  writing the failing test
+✓ claim-verifier  haiku   ▰▰▱▱▱          850  re-check claims
+```
+
+Status icon (`●` running, `✓` completed, `✗` failed, `■` killed, `○` other), agent, model, effort meter (`low`
+`▰▱▱▱▱` to `max` `▰▰▰▰▰`; a numeric thinking budget shows as `≤8k`), elapsed time, tokens, label. The label is the
+progress summary Claude Code has, else the task description. Columns line up across rows, a column no row has is
+dropped, and finished rows are dimmed. The clock shows only while the task runs, because a finished task has no end
+time. Colours are ANSI; `NO_COLOR=1` turns them off. The script uses only the standard library and never fails: on any error it prints
 nothing and the default rows stay. Needs a Claude Code version with `subagentStatusLine` (`agentType` needs 2.1.293).
 The setting is off under `allowManagedHooksOnly`, `disableAllHooks` and an untrusted folder; a user's own
 `subagentStatusLine` overrides the plugin's. `${CLAUDE_PLUGIN_ROOT}` is empty in that command (checked on 2.1.317), so
