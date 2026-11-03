@@ -18,3 +18,6 @@ Code: the smallest complete change. Take the first rung that fully works:
 - Never cut: validation at trust boundaries, security, error handling that prevents data loss, accessibility, or anything the user asked for.
 - Test first still applies: no production code without a failing test you watched fail.
 - A deliberate shortcut gets one comment: `shortcut: <the limit>, <when to upgrade>`. Comment only the why the code cannot show.
+
+
+A subagent starts its final reply with `STATUS: done|blocked|failed — <15 words max>`.

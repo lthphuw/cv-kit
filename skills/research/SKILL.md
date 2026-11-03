@@ -23,9 +23,9 @@ python3 "${CLAUDE_SKILL_DIR}/../../scripts/research_workspace.py" clone <slug> <
 
 Papers and pages go in `sources/` (`curl -L -o`, not WebFetch, which returns a summary), clones in `repos/`
 (git-ignored; each clone's url and commit are in `evidence/repos.json`), and the rest in the folder:
-`brief.md`, `scout-<candidate>.json`, `claims.json`, `blind.json`, `checks.json`, `report.md`. Read the code in a
-clone to compare it with the paper. Run nothing from a clone, not even its tests or installer, unless the user says
-yes; a run happens in a throwaway environment and its result is labelled `reproduced`.
+`brief.md`, `scout-<candidate>.json`, `claims.json`, `blind.json`, `checks.json`, `report.md`, `appendix.md`. Read the
+code in a clone to compare it with the paper. Run nothing from a clone, not even its tests or installer, unless the
+user says yes; a run happens in a throwaway environment and its result is labelled `reproduced`.
 
 ## Pick the route
 
@@ -43,11 +43,11 @@ yes; a run happens in a throwaway environment and its result is labelled `reprod
    being customised. Ask for anything missing, one question at a time.
 2. **Scout.** Sweep the sources in `${CLAUDE_SKILL_DIR}/../../shared/sources.md` (arXiv, Hugging Face Papers, CVF,
    GitHub code search; `paperswithcode.co` only for leads). Make a candidate list with one line each, and ask the
-   user which one to three models they expect to see.
+   user which one to three models they expect to see. In chat keep it terse: the list and the question, no recap.
 3. **Shortlist.** Exclude in this order: licence, task, no released weights, no traceable numbers, stack or
    hardware. Give each candidate one reason or `advance` with the deciding fact (15 words) and what would change
    it; an undecided one advances; never exclude on a benchmark number here. Listed = excluded + advanced. At most
-   six advance. Show the table and wait for approval.
+   six advance. Show the table (one line per row, no prose around it) and wait for approval.
 4. **Deep-read.** One `researcher` agent per approved candidate, in parallel, with the candidate, the brief, what is
    ruled out, the folder and its output path. Use `model` `sonnet`, `effort` `high`; a paper-heavy or
    contradictory candidate gets `model` `opus`.
@@ -57,16 +57,20 @@ yes; a run happens in a throwaway environment and its result is labelled `reprod
    never sees the scouts' values. Run LINT `claims.json --checks checks.json` and show the user `wrong-paper`,
    `differs` (both texts), `absent`, then `unreachable`. An unreachable source does not make a claim false; a
    `differs` is never resolved silently.
-6. **Synthesise.** Fill `${CLAUDE_SKILL_DIR}/references/report-template.md`. Compare numbers only when dataset,
-   split, resolution and hardware match; with fewer than two comparable candidates, do not rank, and make the
-   validation plan the output. Then run LINT `claims.json --checks checks.json --report report.md` and fix every error.
-7. **Hand off.** If the `rnd-notebook` skill is installed, offer to record the decision there.
+6. **Synthesise.** Write `report.md` and `appendix.md` as `${CLAUDE_SKILL_DIR}/references/report-template.md` says:
+   the report is short (Overview, at most 7 key points, comparison table, at most 3 next steps; at most 400 words
+   outside the table) and everything else goes to the appendix, `not_found` and `access_failed` included. Compare
+   numbers only when dataset, split, resolution and hardware match; with fewer than two comparable candidates, do not
+   rank, and make the next steps the output. Then run LINT `claims.json --checks checks.json --report report.md`
+   (it also checks `appendix.md`) and fix every error.
+7. **Hand off.** In chat print only the Overview (in place of `Summarization:`) and the path to `report.md`, then
+   `Next:`; no recap of the key points, table or appendix. If the `rnd-notebook` skill is installed, offer to record the decision there.
 
 ## Rules
 
 - Each claim follows the schema in `${CLAUDE_PLUGIN_ROOT}/agents/researcher.md`, with a verbatim quote from a saved
   file and a label: `reported`, `reproduced` or `unverified`. A claim you could not confirm is listed under "not
-  found", not dropped.
+  found" in `appendix.md`, not dropped.
 - State the licence of every candidate (`${CLAUDE_SKILL_DIR}/../../shared/licenses.md`); write `licence UNVERIFIED`
   if unread. Pin revisions of weights and code you recommend.
 - "SOTA" means the best of the candidates checked, on a named benchmark, at a date. "Latest" carries a date or

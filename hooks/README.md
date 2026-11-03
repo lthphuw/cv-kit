@@ -46,8 +46,8 @@ The hook and the `commit` skill stop a trailer in a message the agent writes. Cl
 ## Concise mode
 
 `concise.py` listens to `SessionStart` (startup, resume, clear, compact) and `SubagentStart`. It adds `concise.md` as
-context, so replies and code stay short in every session and every subagent. It only adds context: it never blocks,
-and any error means the session starts without it. The rules are adapted from ponytail (MIT, copyright (c) 2026
+context, so replies and code stay short in every session and every subagent; at `SessionStart` it also adds
+`progress.md` (see below). It only adds context: it never blocks, and any error means the session starts without it. The rules are adapted from ponytail (MIT, copyright (c) 2026
 DietrichGebert): the decision ladder, the `shortcut:` comment and the never-cut list. To change the rules, edit
 `concise.md`; to switch them off, remove the two entries from `hooks.json`.
 
@@ -68,3 +68,27 @@ under `~/.cache/cv-kit/gate/` (set `CV_KIT_GATE_DIR` to move it, delete it any t
 
 It is a nudge toward "evidence over claims", not a proof: it cannot tell that the right tests ran. A request for only
 a failing test (the red step) is answered by saying so.
+
+## Progress and next prompts
+
+Two features show progress without the user asking, and suggest what to type next.
+
+**Live rows.** `settings.json` at the plugin root sets `subagentStatusLine` (a plugin may set only `agent` and
+`subagentStatusLine`). Claude Code runs `agent_status.py` on each refresh tick with the visible subagents as JSON on
+stdin (about every 5 s) and replaces each row with `engineer · sonnet · 4m12s · 1.2k tok · running · <label>`, cut to
+the row width. The label is the
+progress summary Claude Code has, else the task description. The clock shows only while the task runs, because a
+finished task has no end time. The script uses only the standard library and never fails: on any error it prints
+nothing and the default rows stay. Needs a Claude Code version with `subagentStatusLine` (`agentType` needs 2.1.293).
+The setting is off under `allowManagedHooksOnly`, `disableAllHooks` and an untrusted folder; a user's own
+`subagentStatusLine` overrides the plugin's. `${CLAUDE_PLUGIN_ROOT}` is empty in that command (checked on 2.1.317), so
+`agent_status.py --register` runs at `SessionStart` and writes the plugin root to `~/.cache/cv-kit/plugin-root`, which
+the command reads; the last session to start wins. Without the file the command fails quietly and the default rows show.
+
+**Event summaries and next prompts.** `concise.md` tells every subagent to start its report with
+`STATUS: done|blocked|failed — <15 words max>`. `progress.md` is added at `SessionStart` only, so subagents pay no
+tokens for it: when a background agent finishes while others run, the main thread prints a `Progress (2/3 done):`
+block, with no clock, since the live rows show the time. A finished task ends with `Summarization:` (at most 5
+bullets) and `Next:` (at most 3 prompts to copy, such as `/cv-kit:review the diff against main`). A plugin cannot steer
+Claude Code's own grey prompt suggestions, so `Next:` is plain text in the reply. There is no timer-based heartbeat:
+the blocks appear on events, and the live rows cover the time in between.

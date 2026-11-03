@@ -13,7 +13,11 @@ or `wrong-paper`, `absent` or `unreachable` with a note. --checks merges them an
 claim's verdict: `confirmed` when the claimed value is in the copied text, `differs` when not.
 --report (which needs --checks) also checks the report: every claim tag names a claim, a claim
 that is not `confirmed` is cited only on a line that says "unconfirmed", and every number in
-the comparison table of section 3 is the value of a claim its row names.
+the comparison table under `## Comparison` is the value of a claim its row names. The report is
+short by design, so it also needs an `## Overview` with no bullet lines, at most 7 numbered items
+under `## Key points`, and at most 400 words outside the table. A report with the old
+`## 3.` comparison heading keeps the table and tag checks only. If an `appendix.md` sits next to
+the report, its claim tags get the same check (the appendix has no table or length rules).
 """
 from __future__ import annotations
 
@@ -48,6 +52,11 @@ DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*-\d+$")
 TAG_RE = re.compile(r"\[([a-z0-9]+(?:-[a-z0-9]+)*-\d+)\](?!\()")
 UNCONFIRMED = "unconfirmed"
+COMPARISON_RE = re.compile(r"##\s*(?:comparison\b|3\.)", re.IGNORECASE)
+BULLET_RE = re.compile(r"\s*(?:[-*+]|\d+[.)])\s")
+NUMBERED_RE = re.compile(r"\d+\.\s")
+MAX_KEY_POINTS = 7
+MAX_WORDS = 400
 SKIPPED_TAGS = {"script", "style", "annotation", "annotation-xml"}
 
 
@@ -201,8 +210,8 @@ def merge_checks(claims: list[dict], checks: list[dict]) -> tuple[list[dict], li
 
 
 def _comparison_table(lines: list[str]) -> tuple[int, list[str], list[tuple[int, list[str]]]] | None:
-    """Return the header line number, header cells and body rows of the table in section 3."""
-    start = next((i for i, line in enumerate(lines) if re.match(r"##\s*3\.", line)), None)
+    """Return the header line number, header cells and body rows of the table under `## Comparison`."""
+    start = next((i for i, line in enumerate(lines) if COMPARISON_RE.match(line)), None)
     if start is None:
         return None
     rows: list[tuple[int, list[str]]] = []
@@ -220,21 +229,59 @@ def _comparison_table(lines: list[str]) -> tuple[int, list[str], list[tuple[int,
     return header_line, [h.lower() for h in header], body
 
 
-def lint_report(text: str, claims: list[dict], name: str = "report") -> list[str]:
-    """Return one error string per report line that the claims do not back."""
+def lint_tags(text: str, claims: list[dict], name: str) -> list[str]:
+    """Return one error string per claim tag the ledger does not back, or cites without saying unconfirmed."""
     by_id = {str(c.get("id")): c for c in claims}
     errors: list[str] = []
-    lines = text.splitlines()
-    for number, line in enumerate(lines, 1):
+    for number, line in enumerate(text.splitlines(), 1):
         for cited in TAG_RE.findall(line):
             claim = by_id.get(cited)
             if claim is None:
                 errors.append(f"{name}:{number}: [{cited}] names no claim in the ledger")
             elif claim.get("check") != "confirmed" and UNCONFIRMED not in line.lower():
                 errors.append(f"{name}:{number}: [{cited}] is {claim.get('check')!r}; say unconfirmed on this line")
+    return errors
+
+
+def _section(lines: list[str], heading: str) -> list[str] | None:
+    """Return the lines under the `## heading` (case-insensitive) up to the next `## `, or None."""
+    start = next((i for i, line in enumerate(lines) if re.match(rf"##\s*{heading}\s*$", line, re.IGNORECASE)), None)
+    if start is None:
+        return None
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
+    return lines[start + 1:end]
+
+
+def _lint_shape(lines: list[str], name: str) -> list[str]:
+    """Return the errors for a report that is not short: Overview, bullets, key points, length."""
+    errors: list[str] = []
+    overview = _section(lines, "overview")
+    if overview is None:
+        errors.append(f"{name}: no ## Overview section")
+    elif any(BULLET_RE.match(line) for line in overview):
+        errors.append(f"{name}: the Overview has a bullet; write 3 to 6 sentences")
+    points = _section(lines, "key points")
+    if points is not None:
+        count = sum(1 for line in points if NUMBERED_RE.match(line))
+        if count > MAX_KEY_POINTS:
+            errors.append(f"{name}: Key points has {count} numbered items; at most {MAX_KEY_POINTS}, combine near-duplicates")
+    words = sum(len(line.split()) for line in lines if not line.lstrip().startswith("|"))
+    if words > MAX_WORDS:
+        errors.append(f"{name}: the body has {words} words outside the table; at most {MAX_WORDS}, move detail to appendix.md")
+    return errors
+
+
+def lint_report(text: str, claims: list[dict], name: str = "report") -> list[str]:
+    """Return one error string per report line that the claims do not back, and per rule it breaks."""
+    by_id = {str(c.get("id")): c for c in claims}
+    lines = text.splitlines()
+    errors = lint_tags(text, claims, name)
+    legacy = not any(re.match(r"##\s*comparison\b", line, re.IGNORECASE) for line in lines)
+    if not legacy:
+        errors += _lint_shape(lines, name)
     table = _comparison_table(lines)
     if table is None:
-        return errors + [f"{name}: section 3 has no comparison table"]
+        return errors + [f"{name}: no comparison table under ## Comparison"]
     header_line, header, body = table
     if "value" not in header or "claim" not in header:
         return errors + [f"{name}:{header_line}: the comparison table needs a Value and a Claim column"]
@@ -295,6 +342,8 @@ def main(argv: list[str] | None = None) -> int:
         claims = _load(args.claims, "claims")
         checks = _load(args.checks, "checks") if args.checks is not None else None
         text = args.report.read_text(encoding="utf-8") if args.report is not None else None
+        appendix = args.report.with_name("appendix.md") if args.report is not None else None
+        appendix_text = appendix.read_text(encoding="utf-8") if appendix is not None and appendix.is_file() else None
     except (OSError, ValueError) as error:
         print(f"cannot read input: {error}", file=sys.stderr)
         return 1
@@ -305,6 +354,8 @@ def main(argv: list[str] | None = None) -> int:
         errors += more
     if text is not None:
         errors += lint_report(text, claims, args.report.name)
+    if appendix_text is not None:
+        errors += lint_tags(appendix_text, claims, "appendix.md")
     for error in errors:
         print(error, file=sys.stderr)
     saved = sum(1 for claim in claims if not _is_blank(claim.get("source_file")))

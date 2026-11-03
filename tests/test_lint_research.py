@@ -1,4 +1,5 @@
 import json
+import re
 
 import pytest
 
@@ -18,13 +19,36 @@ LATENCY = {
 FOUND = {"id": "rf-detr-1", "status": "found", "found": "Table 3: RF-DETR (L) 54.7 AP"}
 CHECKED = {**GOOD, "check": "confirmed", "found": FOUND["found"], "note": None}
 
-TABLE = """# Decision
+TABLE = """# Decision: which detector?
+2026-10-15, brief 0a1b2c3, cv-kit 0.4.0.
+
+## Overview
+RF-DETR is the pick. The main risk is that its number comes from the authors' own run. Confidence is medium.
+
+## Key points
+1. **RF-DETR leads on COCO** 54.7 AP on val2017 [rf-detr-1].
+2. **Latency is open** No on-device number was found for either model.
+
+## Comparison
+
+| Candidate | Value | Metric | Claim |
+|---|---|---|---|
+| RF-DETR | {value} | AP | {tag} |
+| Other | not comparable | AP | — |
+
+## Next steps
+1. Measure latency on the target device with the production input size.
+
+Details: [appendix.md](appendix.md).
+"""
+
+LEGACY = """# Decision
 
 ## 3. Candidate comparison
 
 | Candidate | Value | Metric | Claim |
 |---|---|---|---|
-| RF-DETR | {value} | AP | {tag} |
+| RF-DETR | 54.7 | AP | [rf-detr-1] |
 | Other | not comparable | AP | — |
 
 ## 4. Recommended design
@@ -34,6 +58,11 @@ RF-DETR is the pick [rf-detr-1].
 
 def report(value="54.7", tag="[rf-detr-1]"):
     return TABLE.format(value=value, tag=tag)
+
+
+def with_section(text, heading, body):
+    """Return text with the body under heading replaced."""
+    return re.sub(rf"(## {heading}\n)(.*?)(?=\n## |\Z)", lambda m: m.group(1) + body + "\n", text, flags=re.S)
 
 
 # ---- claims ----
@@ -257,13 +286,70 @@ def test_unconfirmed_claim_must_be_marked():
     claim = {**GOOD, "check": "unreachable", "note": "arXiv 503"}
     errors = lint_report(report(), [claim])
     assert errors and all("say unconfirmed" in e for e in errors)
-    marked = report(tag="[rf-detr-1] unconfirmed").replace("pick [rf-detr-1]", "pick [rf-detr-1] (unconfirmed)")
+    marked = report(tag="[rf-detr-1] unconfirmed").replace("val2017 [rf-detr-1]", "val2017 [rf-detr-1] unconfirmed")
     assert lint_report(marked, [claim]) == []
 
 
 def test_report_without_a_comparison_table():
-    assert lint_report("# x\n\n## 3. Candidate comparison\nnone\n", [CHECKED]) == [
-        "report: section 3 has no comparison table"]
+    text = report().replace("## Comparison", "## Comparison\nnone\n\n## Notes", 1)
+    errors = lint_report(re.sub(r"\| Candidate.*?\n\n(?=## Next)", "", text, flags=re.S), [CHECKED])
+    assert errors == ["report: no comparison table under ## Comparison"]
+
+
+def test_comparison_heading_is_case_insensitive():
+    assert lint_report(report().replace("## Comparison", "## comparison"), [CHECKED]) == []
+
+
+def test_table_is_found_only_under_the_comparison_heading():
+    # A table under Key points is not the comparison table, so the comparison heading finds none.
+    text = report().replace("## Comparison\n", "## Comparison\nSee below.\n\n## Extra\n")
+    assert any("no comparison table" in e for e in lint_report(text, [CHECKED]))
+
+
+def test_old_section_3_report_is_still_accepted():
+    assert lint_report(LEGACY, [CHECKED]) == []
+    assert any("is not the value" in e for e in lint_report(LEGACY.replace("| 54.7 |", "| 55.1 |"), [CHECKED]))
+
+
+def test_report_needs_an_overview():
+    text = report().replace("## Overview", "## Summary")
+    assert "report: no ## Overview section" in lint_report(text, [CHECKED])
+
+
+def test_overview_is_case_insensitive():
+    assert lint_report(report().replace("## Overview", "## overview"), [CHECKED]) == []
+
+
+@pytest.mark.parametrize("bullet", ["- one", "* one", "+ one", "1. one", "  - nested"])
+def test_overview_has_no_bullets(bullet):
+    text = with_section(report(), "Overview", "RF-DETR is the pick.\n" + bullet + "\n")
+    assert any("Overview has a bullet" in e for e in lint_report(text, [CHECKED]))
+
+
+def test_overview_may_start_a_line_with_bold_text():
+    text = with_section(report(), "Overview", "**RF-DETR** is the pick.\n")
+    assert lint_report(text, [CHECKED]) == []
+
+
+def test_key_points_are_at_most_seven():
+    seven = "\n".join(f"{n}. **Point {n}** Detail." for n in range(1, 8))
+    assert lint_report(with_section(report(), "Key points", seven), [CHECKED]) == []
+    eight = seven + "\n8. **Point 8** Detail."
+    assert any("Key points has 8 numbered items" in e for e in lint_report(with_section(report(), "Key points", eight), [CHECKED]))
+
+
+def test_report_body_is_at_most_400_words():
+    # 7 key points of 1 or 2 sentences, a 6-sentence Overview and 3 next steps must fit under the cap.
+    filler = "word " * 400
+    text = with_section(report(), "Next steps", "1. " + filler)
+    assert any("body has" in e and "400" in e for e in lint_report(text, [CHECKED]))
+    short = with_section(report(), "Next steps", "1. " + "word " * 330)
+    assert lint_report(short, [CHECKED]) == []
+
+
+def test_table_rows_do_not_count_towards_the_word_cap():
+    rows = "\n".join("| Row | not comparable | AP | — |" for _ in range(60))
+    assert lint_report(report().replace("| Other | not comparable | AP | — |", rows), [CHECKED]) == []
 
 
 def test_markdown_links_are_not_tags():
@@ -290,6 +376,37 @@ def test_cli_report_mode(tmp_path):
     assert main([claims, "--checks", checks, "--report", str(tmp_path / "report.md")]) == 0
     differs = write(tmp_path / "checks.json", [{**FOUND, "found": "54.1 AP"}])
     assert main([claims, "--checks", differs, "--report", str(tmp_path / "report.md")]) == 1
+
+
+def test_cli_applies_the_tag_check_to_an_appendix_beside_the_report(tmp_path, capsys):
+    (tmp_path / "report.md").write_text(report(), encoding="utf-8")
+    claims = write(tmp_path / "claims.json", [GOOD])
+    checks = write(tmp_path / "checks.json", [FOUND])
+    args = [claims, "--checks", checks, "--report", str(tmp_path / "report.md")]
+    (tmp_path / "appendix.md").write_text("Ledger: [rf-detr-1] holds 54.7 AP.\n", encoding="utf-8")
+    assert main(args) == 0
+    (tmp_path / "appendix.md").write_text("Ledger: [yolo-9] holds 40 AP.\n", encoding="utf-8")
+    assert main(args) == 1
+    assert "appendix.md:1: [yolo-9] names no claim" in capsys.readouterr().err
+
+
+def test_cli_appendix_must_mark_an_unconfirmed_claim(tmp_path, capsys):
+    (tmp_path / "report.md").write_text(report(), encoding="utf-8")
+    claims = write(tmp_path / "claims.json", [GOOD])
+    checks = write(tmp_path / "checks.json", [{"id": "rf-detr-1", "status": "unreachable", "note": "503"}])
+    args = [claims, "--checks", checks, "--report", str(tmp_path / "report.md")]
+    (tmp_path / "appendix.md").write_text("[rf-detr-1] was 54.7 AP.\n", encoding="utf-8")
+    assert main(args) == 1
+    err = capsys.readouterr().err
+    assert "appendix.md:1: [rf-detr-1] is 'unreachable'; say unconfirmed" in err
+
+
+def test_cli_appendix_has_no_table_or_overview_requirement(tmp_path):
+    (tmp_path / "report.md").write_text(report(), encoding="utf-8")
+    (tmp_path / "appendix.md").write_text("## Not found\n- nothing\n", encoding="utf-8")
+    claims = write(tmp_path / "claims.json", [GOOD])
+    checks = write(tmp_path / "checks.json", [FOUND])
+    assert main([claims, "--checks", checks, "--report", str(tmp_path / "report.md")]) == 0
 
 
 def test_cli_report_needs_checks(tmp_path):

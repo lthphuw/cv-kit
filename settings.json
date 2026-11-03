@@ -1,0 +1,6 @@
+{
+  "subagentStatusLine": {
+    "type": "command",
+    "command": "python3 \"$(cat \"$HOME/.cache/cv-kit/plugin-root\" 2>/dev/null)/hooks/agent_status.py\" 2>/dev/null"
+  }
+}

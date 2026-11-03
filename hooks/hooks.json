@@ -10,6 +10,14 @@
             "args": [
               "${CLAUDE_PLUGIN_ROOT}/hooks/concise.py"
             ]
+          },
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/agent_status.py",
+              "--register"
+            ]
           }
         ]
       }
