@@ -48,3 +48,26 @@ lists `effort` (`low` to `max`, or a numeric token budget; omitted when unset), 
 and says `content` renders ANSI colours as-is. Of three mock-ups (effort meter, effort as a word, meter plus a token
 sparkline) the user chose the meter: `● engineer  sonnet  ▰▰▱▱▱  4m12s  1.2k  <label>`, with a status icon, columns
 aligned across rows, finished rows dimmed, and `NO_COLOR` honoured. `contextWindowSize` and `tokenSamples` are unused.
+
+## Row redesign 2: grouping, animation, narrow rows (2026-11-03)
+
+The user asked for the order `● engineer (sonnet ▰▰▱▱▱)  <label> <tokens> <time>`, an animated status icon, and
+spacing that suits the row width. S1 was re-read the same day (`curl` of `statusline.md`, sections "Subagent status
+lines", "Task fields" and "How status lines work"), and S2 (`curl` of `settings-reference.md`, entry
+`subagentStatusLine`):
+
+- The command runs once per refresh tick; `refreshInterval` is documented for `statusLine` only, and S2 lists no
+  timing field for `subagentStatusLine`. So a row changes at most once a tick (about 5 s, finding 2), and that limits
+  the animation to one frame per tick.
+- `tokenSamples` holds up to the last 16 `tokenCount` readings, one per tick, so a stalled agent can be seen without
+  keeping state.
+- The input carries the base hook fields, so `session_id` names a per-session memory file.
+
+A browser mock-up (5 agents, width slider, simulated ticks) offered two spinners and two layouts for the model group.
+The user chose the quarter-turn spinner `◐◓◑◒` and the group attached to the name. Built: the spinner turns on each
+tick the token count grew; `○` after three still ticks; a finish shows the icon inverted for one tick, then bold for
+one, then done and killed rows fade and failed rows stay bright; label column capped at 48; narrow rows drop the
+tokens, the meter, the model group and the label, in that order. Detecting a finish and a token rise needs last
+tick's values, kept in `~/.cache/cv-kit/rows/<session_id>.json` (pruned at `SessionStart` after a day). Not checked
+live in Claude Code: whether the tick is a fixed timer, so a row may get an extra event-driven run that shortens the
+flash.

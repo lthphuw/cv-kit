@@ -167,14 +167,15 @@ commit   branch + files + message ─► STOP ─► your yes ─► git / svn c
 ```
 while agents run: one live row each, refreshed about every 5 s
 
-  ● engineer  sonnet  ▰▰▱▱▱  1m42s  18k  Add iou with tests
-  │ │         │       │      │      │    └─ task
-  │ │         │       │      │      └─ tokens
-  │ │         │       │      └─ elapsed (running rows only)
-  │ │         │       └─ effort
+  ◐ engineer (sonnet ▰▰▱▱▱)  Add iou with tests  18k  1m42s
+  │ │         │      │       │                   │    └─ elapsed (running rows only)
+  │ │         │      │       │                   └─ tokens
+  │ │         │      │       └─ task
+  │ │         │      └─ effort
   │ │         └─ model
   │ └─ agent
-  └─ ● running   ✓ done   ✗ failed   ■ killed      (finished rows fade)
+  └─ ◐◓◑◒ running (turns while tokens grow)   ○ stalled   ✓ done   ✗ failed   ■ killed
+     a finish flashes, then done and killed rows fade; narrow rows drop tokens, effort, model
 
 when one finishes                      at the end
   ● Progress (1/2 done):                 ● Summarization:
@@ -250,7 +251,7 @@ Details and known gaps: `hooks/README.md`.
 | Models | `model:` in `agents/*.md` | aliases `haiku` `sonnet` `opus`, or a full model ID to pin |
 | Concise mode, Progress, Next | `hooks/hooks.json` | remove the two `concise.py` entries to turn off |
 | Evidence ledger | `~/.cache/cv-kit/gate/` | move with `CV_KIT_GATE_DIR` |
-| Live rows | plugin `settings.json` | your own `subagentStatusLine` wins; `NO_COLOR=1` drops colour |
+| Live rows | plugin `settings.json` | your own `subagentStatusLine` wins; `NO_COLOR=1` drops colour; tick memory in `~/.cache/cv-kit/rows/` |
 
 Lint configs tested with ruff 0.17.2, mypy 2.4.0, clang-format and clang-tidy 23.1.3, CMake 4.4, GCC 13.3.
 

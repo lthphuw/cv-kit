@@ -78,16 +78,26 @@ Two features show progress without the user asking, and suggest what to type nex
 stdin (about every 5 s) and replaces each row with aligned columns, cut to the row width:
 
 ```
-● engineer        sonnet  ▰▰▱▱▱  4m12s  1.2k  writing the failing test
-✓ claim-verifier  haiku   ▰▰▱▱▱          850  re-check claims
+◐ claim-verifier (haiku ▰▱▱▱▱)  re-check claims   850  4m12s
+✓ engineer (sonnet ▰▰▱▱▱)       add iou          1.2k
 ```
 
-Status icon (`●` running, `✓` completed, `✗` failed, `■` killed, `○` other), agent, model, effort meter (`low`
-`▰▱▱▱▱` to `max` `▰▰▰▰▰`; a numeric thinking budget shows as `≤8k`), elapsed time, tokens, label. The label is the
-progress summary Claude Code has, else the task description. Columns line up across rows, a column no row has is
-dropped, and finished rows are dimmed. The clock shows only while the task runs, because a finished task has no end
-time. Colours are ANSI; `NO_COLOR=1` turns them off. The script uses only the standard library and never fails: on any error it prints
-nothing and the default rows stay. Needs a Claude Code version with `subagentStatusLine` (`agentType` needs 2.1.293).
+Status icon, agent, a group with the model and the effort meter (`low` `▰▱▱▱▱` to `max` `▰▰▰▰▰`; a numeric
+thinking budget shows as `≤8k`), label, tokens, elapsed time. The label is the progress summary Claude Code has, else
+the task description. Columns line up across rows, the label column stops at 48, and a column no row has is dropped.
+The clock shows only while the task runs, because a finished task has no end time. When the row is narrow, parts go
+in this order: the label shrinks to 20, the tokens, the effort meter, the model group, the label shrinks to 6, the
+label; whatever is left is cut with `…`.
+
+The icon changes once per refresh tick, the only animation a row can have. Running: `◐◓◑◒` turns a quarter on each
+tick the token count grew, and `○` shows once `tokenSamples` has stood still for three ticks. A task seen to finish
+shows its icon (`✓` completed, `✗` failed, `■` killed) inverted for one tick and bold for the next; then completed and
+killed rows fade, failed rows stay bright. A task first seen already finished does not flash. `○` grey is any other
+status. To tell ticks apart the script keeps the last status, token count, spinner frame and ticks since the status
+changed for each row in `~/.cache/cv-kit/rows/<session_id>.json`; `--register` deletes files there older than a day.
+Without a usable `session_id` the rows still render, with a still spinner and no flash. Colours are ANSI; `NO_COLOR=1`
+turns them off (the spinner still turns). The script uses only the standard library and never fails: on any error it
+prints nothing and the default rows stay. Needs a Claude Code version with `subagentStatusLine` (`agentType` needs 2.1.293).
 The setting is off under `allowManagedHooksOnly`, `disableAllHooks` and an untrusted folder; a user's own
 `subagentStatusLine` overrides the plugin's. `${CLAUDE_PLUGIN_ROOT}` is empty in that command (checked on 2.1.317), so
 `agent_status.py --register` runs at `SessionStart` and writes the plugin root to `~/.cache/cv-kit/plugin-root`, which
