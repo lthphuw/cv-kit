@@ -1,6 +1,6 @@
 {
   "name": "cv-kit",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Test-first development for Python and edge C++ with agents routed by task difficulty, evidence-backed computer-vision R&D, strict review, hand-drawn architecture figures, and git/SVN commit discipline.",
   "author": { "name": "Lương Thanh Hoàng Phú" },
   "homepage": "https://github.com/lthphuw/cv-kit",
