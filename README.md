@@ -51,10 +51,10 @@ You never pick an agent: the skill does, sizing model and effort to the task.
 | Kind | Name | Model · effort | Job |
 |:-----|:-----|:---------------|:----|
 | Agent | `explorer` | haiku `▰▱▱▱▱` | find and summarise code, logs, docs · read-only |
-| Agent | `engineer` | sonnet `▰▰▱▱▱` · hard: opus `▰▰▰▱▱` | one change, test first |
+| Agent | `engineer` | sonnet `▰▰▰▱▱` · mechanical: `▰▰▱▱▱` · hard: opus `▰▰▰▱▱` | one change, test first, from a full brief |
 | Agent | `researcher` | sonnet `▰▰▰▱▱` | sourced evidence for one candidate model |
 | Agent | `claim-verifier` | haiku `▰▰▱▱▱` | re-reads each source, blind to the claimed value |
-| Agent | `reviewer` | opus `▰▰▰▱▱` · routine: sonnet `▰▰▱▱▱` | read-only review |
+| Agent | `reviewer` | sonnet `▰▰▰▱▱` · risky: opus `▰▰▰▱▱` | read-only review |
 | Agent | `lead` | opus `▰▰▰▱▱` | main thread, only delegates |
 
 Effort: `▰▱▱▱▱` low · `▰▰▱▱▱` medium · `▰▰▰▱▱` high · `▰▰▰▰▱` xhigh · `▰▰▰▰▰` max
@@ -62,23 +62,25 @@ Effort: `▰▱▱▱▱` low · `▰▰▱▱▱` medium · `▰▰▰▱▱` h
 ### Routing by difficulty
 
 ```
-                               how hard is the task?
+                     what is still unknown after explorer looked?
           ┌──────────────────────────────┼──────────────────────────────┐
           ▼                              ▼                              ▼
-         read                         ordinary                         hard
-   find · summarise             feature · fix · test          unclear bug · threads
-          │                              │                  numerics · perf · security
-          │                              │                              │
+         read                     known spec · bug a                   hard
+   find · summarise              test can reproduce            threads · memory safety
+          │                    (box maths, NMS, perf)        cause unknown · cross-module
           ▼                              ▼                              ▼
    explorer  haiku                engineer  sonnet                engineer  opus
-      ▰▱▱▱▱ low                     ▰▰▱▱▱ medium                    ▰▰▰▱▱ high
-                                         │                              │
+      ▰▱▱▱▱ low                     ▰▰▰▱▱ high                      ▰▰▰▱▱ high
                                          ▼                              ▼
                                   reviewer  sonnet                reviewer  opus
-                                    ▰▰▱▱▱ medium                    ▰▰▰▱▱ high
+                                    ▰▰▰▱▱ high                      ▰▰▰▱▱ high
 
-attempt failed? ──► one level up: sonnet ▰▰▱▱▱ ──► opus ▰▰▰▱▱ ──► opus ▰▰▰▰▱ xhigh
-                    never the same prompt twice
+brief = Goal · Done when · Facts · Files · Constraints · Ruled out · Mode (fix | diagnose)
+
+came back blocked?  ──► answer it, SendMessage the same agent
+failed on the brief? ──► fix the brief, same model
+failed on reasoning? ──► one level up: sonnet ▰▰▰▱▱ ──► opus ▰▰▰▱▱ ──► opus ▰▰▰▰▱ once ──► report
+                         at most 3 attempts, never the same brief twice
 ```
 
 ### Lead mode: `claude --agent cv-kit:lead`
@@ -142,7 +144,7 @@ one claim to check? ─► steps 4–5 only ─► confirmed | partly right | co
   │
   ├─ 1 SCOPE ──── paths · uncommitted diff · branch vs base · pull request
   ├─ 2 TOOLS ──── ruff · mypy · clang-format · clang-tidy · build · tests   (only those installed)
-  ├─ 3 REVIEW ─── reviewer opus ▰▰▰▱▱   xhigh for concurrency, memory safety, published numbers
+  ├─ 3 REVIEW ─── reviewer sonnet ▰▰▰▱▱   opus for concurrency, memory safety, security, published numbers
   │               large diff ─► one reviewer per directory, in parallel
   ├─ 4 REPORT ─── [Critical] CPP-ERR-8 src/infer/engine.cc:88 ─► What · Trigger · Fix
   │               Blocking: 1 Critical, 0 Major
@@ -264,7 +266,7 @@ Lint configs tested with ruff 0.17.2, mypy 2.4.0, clang-format and clang-tidy 23
 - Progress, Summarization, Next: model-written, one can be skipped.
 - Catalogue rows marked `UNVERIFIED` are unchecked; licences change.
 - No training, benchmark harness or hardware measurement: you run those.
-- Cost: `lead` and `reviewer` run on Opus; the eval suite calls the API (run by hand).
+- Cost: `lead` runs on Opus; `engineer` and `reviewer` use Opus only for the Hard rows; the eval suite calls the API (run by hand).
 
 ## Development
 

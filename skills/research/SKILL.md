@@ -49,8 +49,8 @@ user says yes; a run happens in a throwaway environment and its result is labell
    it; an undecided one advances; never exclude on a benchmark number here. Listed = excluded + advanced. At most
    six advance. Show the table (one line per row, no prose around it) and wait for approval.
 4. **Deep-read.** One `researcher` agent per approved candidate, in parallel, with the candidate, the brief, what is
-   ruled out, the folder and its output path. Use `model` `sonnet`, `effort` `high`; a paper-heavy or
-   contradictory candidate gets `model` `opus`.
+   ruled out, the folder and its output path. Use `model` `sonnet`, `effort` `high`; only a rerun of a
+   candidate whose first report left contradictions unresolved gets `model` `opus`.
 5. **Cross-check.** Merge the scouts' `claims` into `claims.json` and carry their `not_found`, `access_failed` and
    `caveats` into the report. Run LINT `claims.json --blind blind.json`, where LINT is
    `python3 "${CLAUDE_SKILL_DIR}/../../scripts/lint_research.py"`. Dispatch one `claim-verifier` with `blind.json`; it

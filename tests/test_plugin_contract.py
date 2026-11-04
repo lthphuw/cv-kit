@@ -38,6 +38,45 @@ class TestModelAliases:
             assert f"`{alias}`" in text
 
 
+def routing_rows() -> list[tuple[str, str, str]]:
+    """(agent, model, effort) for each row of the routing table in develop."""
+    text = (ROOT / "skills/develop/SKILL.md").read_text(encoding="utf-8")
+    table = text.split("## Route the work", 1)[1]
+    return re.findall(r"^\|[^|]*\| `([a-z-]+)` \| `([a-z]+)` \| (\w+) \|$", table, re.M)
+
+
+class TestRouting:
+    """Sonnet at high does most of the work; Opus is kept for the few rows where the reasoning is the hard part."""
+
+    @pytest.mark.parametrize("agent", ["engineer", "reviewer"])
+    def test_workers_default_to_sonnet_high(self, agent):
+        fm = front(ROOT / f"agents/{agent}.md")
+        assert (fm["model"], fm["effort"]) == ("sonnet", "high")
+
+    def test_opus_is_the_exception_in_the_table(self):
+        rows = routing_rows()
+        opus = [r for r in rows if r[1] == "opus"]
+        assert len(rows) >= 5 and len(opus) <= 2
+        assert ("engineer", "sonnet", "high") in rows and ("reviewer", "sonnet", "high") in rows
+
+    def test_the_brief_has_every_field(self):
+        text = (ROOT / "skills/develop/SKILL.md").read_text(encoding="utf-8")
+        for field in ("Goal:", "Done when:", "Facts:", "Files:", "Constraints:", "Ruled out:", "Mode:"):
+            assert field in text, field
+
+    def test_a_failed_attempt_is_rebriefed_before_it_is_escalated(self):
+        text = (ROOT / "skills/develop/SKILL.md").read_text(encoding="utf-8")
+        assert "same model" in text and "SendMessage" in text and "at most three" in text
+
+    def test_the_engineer_stays_inside_its_brief(self):
+        text = (ROOT / "agents/engineer.md").read_text(encoding="utf-8")
+        assert "outside `Files`" in text and "diagnose" in text
+
+    def test_review_defaults_to_sonnet(self):
+        text = (ROOT / "skills/review/SKILL.md").read_text(encoding="utf-8")
+        assert "`model` `sonnet`, `effort` `high`" in text
+
+
 class TestHooks:
     def handlers(self, event: str):
         return [(g.get("matcher"), h) for g in hooks().get(event, []) for h in g["hooks"]]

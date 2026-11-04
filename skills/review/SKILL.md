@@ -22,9 +22,9 @@ Facts read just now (a fact marked not found is not a finding):
    `ruff format --check`, `mypy`. C++: `clang-format --dry-run --Werror`, `clang-tidy` (needs
    `compile_commands.json`), the project's build with its warning flags, and the tests. Record each command and its
    result; if a tool did not run, say so. Missing or unconfigured tools: offer `/cv-kit:setup`.
-3. **Dispatch the `reviewer` agent** (`model` `opus`, `effort` `high`; `xhigh` for concurrency, memory safety or
-   a numeric result the user will publish) with the file list or diff range and the tool output, never your own
-   findings. For a large change, split by directory and run the reviewers in one message.
+3. **Dispatch the `reviewer` agent** (`model` `sonnet`, `effort` `high`; `model` `opus` when the change touches
+   concurrency, memory safety, security or a number the user will publish) with the file list or diff range and the
+   tool output, never your own findings. For a large change, split by directory and run the reviewers in one message.
 4. **Report** in the format of `${CLAUDE_SKILL_DIR}/references/report-format.md`, copied, not retold in prose. Each
    finding opens with the line `[Severity] RULE-ID path:line` and is followed by What, Trigger and Fix lines; a defect
    no catalogue rule covers opens `[Severity] no rule` and names the norm it rests on. Most severe first, then the

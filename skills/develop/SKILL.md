@@ -35,17 +35,41 @@ Need sourced evidence about a model, paper or benchmark: `/cv-kit:research`. Nee
 
 ## Route the work
 
-Route yourself; do not ask the user. Anything beyond a clear one-line change goes to an agent from this table. You scope it and write the brief; the agent reads or writes; you check what comes back. Judge difficulty from the request before reading code: an unknown-cause bug, or anything with threads, numerics, performance or security, is Hard even if the fix looks small. Do not read more than a couple of files or search the repository yourself; send `explorer` and keep its answer. Pass `model` and `effort` on each Agent call from this table. Without the Agent tool, do the work yourself with the same steps.
+Route yourself; do not ask the user. Anything beyond a clear one-line change goes to an agent. You scope it, gather the facts, write the brief and check what comes back; the agent reads or writes. Do not read more than a couple of files or search the repository yourself: send `explorer` and put its `path:line` answer in the brief. Pass `model` and `effort` on every Agent call. Without the Agent tool, do the work yourself with the same steps.
+
+**Sonnet is the default; a precise brief is what makes it enough.** Size by what is still unknown once `explorer` has answered, not by topic: box maths, NMS, a located bug or a perf fix with a benchmark is a Sonnet task. Opus is for work where the reasoning, not the typing, is the hard part.
 
 | Task | Agent | `model` | `effort` |
 | --- | --- | --- | --- |
 | Find, read or summarise code, logs, docs | `explorer` | `haiku` | low |
-| Ordinary feature, bug fix, test, refactor step | `engineer` | `sonnet` | medium |
-| Unclear bug, cross-module design, concurrency, numerics, performance, security | `engineer` | `opus` | high |
-| Review of a Hard change, or of anything touching numerics, security or a published number | `reviewer` | `opus` | high |
-| Review of a routine change whose tests and linters pass | `reviewer` | `sonnet` | medium |
+| Mechanical: rename, move, a config value, a test for behaviour already pinned | `engineer` | `sonnet` | medium |
+| Feature, bug fix, test or refactor step with a known spec or a bug a test can reproduce | `engineer` | `sonnet` | high |
+| Hard: a concurrency or memory-safety bug, a cause still unknown after `explorer` and a reproduction attempt, a design across modules or a public API | `engineer` | `opus` | high |
+| Review of a change whose tests and linters pass | `reviewer` | `sonnet` | high |
+| Review touching concurrency, memory safety, security or a number that will be published | `reviewer` | `opus` | high |
 
-`model` takes the aliases `haiku`, `sonnet`, `opus` (Haiku 5.5, Sonnet 5.5 and Opus 5.5 on the Anthropic API). Escalate one row after a failed attempt, and to `xhigh` on the last row; never resend the same prompt. Run file-disjoint tasks in one message; give each parallel `engineer` that edits files `isolation: worktree`. A brief states the goal, the constraints, what is ruled out and the exact files. Check what comes back against the output you asked for. Detail: `${CLAUDE_SKILL_DIR}/references/routing.md`.
+**The brief.** Every `engineer` call carries these fields. A field you cannot fill is a question for `explorer` or the user, never for the engineer to guess.
+
+```
+Goal: one sentence, the behaviour after the change.
+Done when: the test command, the new test names that must fail first, and "full suite green".
+Facts: explorer's path:line findings, the repro or error text, the baseline test result.
+Files: the files to change and the test file; anything else is out of bounds.
+Constraints: project rules that apply; what must not change (API, dtype, BGR order, output format).
+Ruled out: what was tried or rejected, and why. "none" on a first attempt.
+Mode: fix | diagnose (reproduce with a test and find the cause; change no production code).
+```
+
+One package is one behaviour and its tests, a few files at most; split anything bigger, and order the parts that depend on each other. Examples of good and bad briefs: `${CLAUDE_SKILL_DIR}/references/routing.md`.
+
+**What comes back.** Rerun the `Done when` command yourself and run `git diff --stat`.
+
+- Done, but a file outside `Files` changed or the red run is missing: ask the same agent with SendMessage, not a new one.
+- Blocked on a fact, a file outside `Files` or a decision: answer it and continue the same agent with SendMessage (without it, a new call with the earlier report pasted in). A decision that changes the scope goes to the user.
+- Failed because of the brief (a wrong file, a missing fact, a bad test command, the environment): fix the brief and rerun on the same model.
+- Failed on the reasoning (the fix did not hold, the evidence contradicts the hypothesis): one row up, with the failed attempt under `Ruled out`. An `opus` high failure gets one `opus` `xhigh` run; then stop and report the evidence.
+
+Never resend the same brief, and run at most three engineer attempts per package. Run file-disjoint packages in one message, at most three engineers at a time, each with `isolation: worktree`.
 
 ## Unattended runs (`/goal`, `/loop`)
 
