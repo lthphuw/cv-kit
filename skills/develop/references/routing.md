@@ -16,7 +16,8 @@ model id). Each agent's frontmatter holds its default (`engineer` and `reviewer`
 | Hard | A concurrency or memory-safety bug; a cause still unknown after `explorer` and a reproduction attempt; a design across modules; a public API or ABI | `engineer`, `opus`, high |
 | Stuck | An `opus` high attempt failed on the reasoning | `engineer`, `opus`, xhigh, once; then report |
 
-Size after `explorer` has answered: a quick look often turns "some bug in the pipeline" into a located one, which is
+A concurrency or memory-safety bug is Hard from the request alone; decide it before reading code. Size
+everything else after `explorer` has answered: a quick look often turns "some bug in the pipeline" into a located one, which is
 Routine. A topic alone (numerics, performance, CV) does not make a task Hard; an unknown does. Most failed Sonnet runs
 are failed briefs, so the first answer to a failure is a better brief, not a bigger model.
 

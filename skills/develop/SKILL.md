@@ -25,7 +25,7 @@ Treat a fact above as true only for what it says; "not found" means look yoursel
 
 ## Flow
 
-1. **Size it.** A clear one-line change: do it. New or vague: read `${CLAUDE_SKILL_DIR}/references/scoping.md`, ask one question at a time, write the brief back, and wait for a yes before code.
+1. **Size it.** A clear one-line change, where the user names the line and the change: do it. A bug whose cause is unknown is never a one-line change, however small the files. New or vague: read `${CLAUDE_SKILL_DIR}/references/scoping.md`, ask one question at a time, write the brief back, and wait for a yes before code.
 2. **Look first.** Read the project's rules and test setup, then run the existing tests for a baseline.
 3. **Red, green, refactor**: by you for a one-line change, otherwise by the `engineer` you brief. Read the test reference that applies before the first test: `${CLAUDE_SKILL_DIR}/references/python-testing.md` (pytest), `cpp-testing.md` (GoogleTest) or `go-testing.md` (`go test`). Refactors follow `refactor.md`. `/simplify` is an optional last pass once the tests are green.
 4. **Verify.** Run the tests and linters. Then review by the risk rules in "Route the work"; a one-line change needs no reviewer, because its test output is the check. Give the reviewer the diff and the tool output, not your conclusions. End with the report: for a bug, the cause in one sentence with `path:line`; the tests added, by name, and what each pins; the change; and the literal output of each command, or that it did not run and why.
@@ -35,9 +35,9 @@ Need sourced evidence about a model, paper or benchmark: `/cv-kit:research`. Nee
 
 ## Route the work
 
-Route yourself; do not ask the user. Anything beyond a clear one-line change goes to an agent. You scope it, gather the facts, write the brief and check what comes back; the agent reads or writes. Do not read more than a couple of files or search the repository yourself: send `explorer` and put its `path:line` answer in the brief. Pass `model` and `effort` on every Agent call. Without the Agent tool, do the work yourself with the same steps.
+Route yourself; do not ask the user. Anything beyond a clear one-line change goes to an agent. You scope it, gather the facts, write the brief and check what comes back; the agent reads, debugs and writes. Do not read more than a couple of files or search the repository yourself: send `explorer` and put its `path:line` answer in the brief. Small files are not a reason to do the work yourself: once you have read enough to find the cause, you have done the engineer's job on the most expensive model, with no failing test behind it. Read only what the brief needs, then delegate. Pass `model` and `effort` on every Agent call. Without the Agent tool, do the work yourself with the same steps.
 
-**Sonnet is the default; a precise brief is what makes it enough.** Size by what is still unknown once `explorer` has answered, not by topic: box maths, NMS, a located bug or a perf fix with a benchmark is a Sonnet task. Opus is for work where the reasoning, not the typing, is the hard part.
+**Sonnet is the default; a precise brief is what makes it enough.** A concurrency or memory-safety bug (deadlock, race, crash only under load, use-after-free) is Hard from the request alone: decide that before reading code, and brief the `opus` engineer with the files and symptoms the user gave. Everything else is sized by what is still unknown once `explorer` has answered, not by topic: box maths, NMS, a located bug or a perf fix with a benchmark is a Sonnet task. Opus is for work where the reasoning, not the typing, is the hard part.
 
 | Task | Agent | `model` | `effort` |
 | --- | --- | --- | --- |

@@ -68,6 +68,14 @@ class TestRouting:
         text = (ROOT / "skills/develop/SKILL.md").read_text(encoding="utf-8")
         assert "same model" in text and "SendMessage" in text and "at most three" in text
 
+    def test_the_main_thread_delegates_even_when_the_files_are_small(self):
+        """Eval 21: the main thread read seven small files, found the deadlock and fixed it without an agent."""
+        text = (ROOT / "skills/develop/SKILL.md").read_text(encoding="utf-8")
+        assert "names the line and the change" in text
+        assert "never a one-line change" in text
+        assert "Small files are not a reason" in text
+        assert "before reading code" in text
+
     def test_the_engineer_stays_inside_its_brief(self):
         text = (ROOT / "agents/engineer.md").read_text(encoding="utf-8")
         assert "outside `Files`" in text and "diagnose" in text
