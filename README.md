@@ -7,15 +7,15 @@ A Claude Code plugin for computer-vision engineers who write Python, edge C++ an
 code, sourced model research or a strict review, with each step handed to the cheapest agent that can do it.
 Commits follow Conventional Commits, without AI trailers.
 
-![The develop and research flows: the main thread scopes the work, read-only agents explore, design, research and review, one agent edits code test first, and notes say when each is used](docs/assets/overview.png)
+![Diagram of the develop flow (brief, explorer, architect, engineer x N, reviewer, report) and the research flow (brief, scout and shortlist, researcher x N, claim-verifier x N, lint, report.md)](docs/assets/overview.png)
 
-<sub>Drawn with cv-kit's own `/cv-kit:figure` skill from [`docs/figures/cv-kit-overview.figure.js`](docs/figures/cv-kit-overview.figure.js).</sub>
+<sub>White boxes run on the main thread, blue agents only read, the purple engineer edits code test first, and the yellow notes say when a step runs.</sub>
 
 ## What you see
 
 ![Live agent rows during a develop run: explorer, architect, two engineers in parallel, then the reviewer](docs/assets/live-rows.gif)
 
-<sub>Rendered from the output of `hooks/agent_status.py` for a scripted run, not a screen recording.</sub>
+<sub>A develop run for "add a tracker between detection and the writer": explorer and architect finish, two engineers build the two packages in parallel, and the reviewer ends with `Blocking: 0 Critical, 0 Major`.</sub>
 
 One live row per agent: `icon agent (model effort) task tokens elapsed`, with `◐` running, `○` stalled, `✓` done,
 `✗` failed, `■` killed. When an agent finishes you get a `Progress` line per agent; a finished task ends with
@@ -135,13 +135,13 @@ You never pick an agent: the skill does, and sizes the model and effort to the t
 
 Effort: `▰▱▱▱▱` low · `▰▰▱▱▱` medium · `▰▰▰▱▱` high · `▰▰▰▰▱` xhigh
 
-- **Sonnet by default.** Opus only for a concurrency or memory-safety bug, a cause still unknown after a
+- Sonnet is the default. Opus runs for a concurrency or memory-safety bug, a cause still unknown after a
   reproduction attempt, a design, and the review of those.
-- **Design first, only when it pays.** Work that splits into packages sharing an interface or a data flow goes to
-  `architect`; you approve the design before any engineer starts.
-- **A brief, not a chat.** Every engineer gets `Goal · Done when · Facts · Files · Constraints · Ruled out · Mode`.
-- **Re-brief before escalating.** Failed on the brief: fix it, same model. Failed on the reasoning: sonnet → opus →
-  opus `▰▰▰▰▱` once, then a report. At most three attempts.
+- Work that splits into packages sharing an interface or a data flow goes to `architect` first, and you approve the
+  design before any engineer starts.
+- Every engineer gets a written brief: `Goal · Done when · Facts · Files · Constraints · Ruled out · Mode`.
+- A failure on the brief gets a fixed brief and the same model. A failure on the reasoning moves from sonnet to opus,
+  then to opus `▰▰▰▰▱` once, then to a report. At most three attempts.
 
 ## Unattended runs
 
@@ -188,13 +188,13 @@ Lint configs tested with ruff 0.17.2, mypy 2.4.0, clang-format and clang-tidy 23
 
 ## Limitations
 
-- Evidence gate: a nudge, it cannot tell the right tests ran.
+- Evidence gate: a nudge; it cannot tell whether the right tests ran.
 - Commit hook: gaps such as `--amend --no-edit` and `bash -c` (`hooks/README.md`).
 - Live rows: need the SessionStart hook; off in untrusted folders and under `disableAllHooks`.
-- Progress, Summarization, Next: model-written, one can be skipped.
+- Progress, Summarization, Next: written by the model, which can skip one.
 - Catalogue rows marked `UNVERIFIED` are unchecked; licences change.
 - No training, benchmark harness or hardware measurement: you run those.
-- Cost: `architect` and the Hard rows of `engineer` and `reviewer` run on Opus; the eval suite calls the API.
+- Cost: `architect` and the hard rows of `engineer` and `reviewer` run on Opus; the eval suite calls the API.
 
 ## Development
 
@@ -205,17 +205,29 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 claude plugin validate . --strict
 ```
 
-CI runs the same. Change the plugin test first; run `scripts/run_evals.sh` before a release. Reference material:
-`shared/`, `hooks/README.md`, `evals/README.md`, `docs/research/`. The overview figure is built from
+CI runs the same. Change the plugin test first; run `scripts/run_evals.sh` before a release. How to contribute:
+`AGENTS.md`. Reference material: `shared/`, `hooks/README.md`, `evals/README.md`. The overview figure is built from
 `docs/figures/cv-kit-overview.figure.js` with the `figure` skill's own scripts.
 
 ## Licence
 
-MIT, see `LICENSE`. Catalogued models carry their own licences; check them before use.
+MIT, see `LICENSE`. Catalogued models carry their own licences; check them before use. `figure` bundles rough.js
+4.6.6 (MIT) and the Patrick Hand font (SIL OFL 1.1).
 
-- Style catalogues: paraphrase the Google Python and C++ Style Guides (CC BY 3.0), ideas from the C++ Core Guidelines,
-  pitfalls from methylDragon's coding notes (BSD-2-Clause).
-- Go catalogue: the Go documentation (BSD-3-Clause; CC BY 4.0 for site pages), uber-go guide (Apache-2.0), goleak
-  (MIT, test only).
-- `figure` bundles rough.js 4.6.6 (MIT) and the Patrick Hand font (SIL OFL 1.1).
-- The research report format is adapted from FOCUS (skill-focus, MIT); concise mode from ponytail (MIT).
+## Acknowledgements
+
+Ideas taken from these projects, rewritten in cv-kit's own words:
+
+- [superpowers](https://github.com/obra/superpowers) (MIT): plugin layout, test-first and verify-before-claiming habits.
+- [academic-research-skills](https://github.com/imbad0202/academic-research-skills) (CC BY-NC 4.0, ideas only): the
+  blind claim verifier and its verdicts.
+- [Deep-Research-skills](https://github.com/Weizhena/Deep-Research-skills) (MIT): the scout and deep-read stages.
+- [skill-focus](https://github.com/stephenturner/skill-focus) (MIT): the short FOCUS report (Lin, Nat. Biotechnol. 2025).
+- [diagram-design](https://github.com/cathrynlavery/diagram-design) (MIT): the figure rules and checks.
+- [ponytail](https://github.com/DietrichGebert/ponytail) (MIT): concise mode.
+- [humanizer](https://github.com/blader/humanizer) (MIT) and Wikipedia's
+  [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing): the plain-prose rules.
+- [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) (CC BY 3.0): the commit format.
+- Style catalogues: the Google Python and C++ Style Guides (CC BY 3.0), the C++ Core Guidelines, methylDragon's coding
+  notes (BSD-2-Clause), the Go documentation (BSD-3-Clause; CC BY 4.0 for site pages), the uber-go guide (Apache-2.0)
+  and goleak (MIT, test only).

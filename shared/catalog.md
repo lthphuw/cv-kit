@@ -1,6 +1,6 @@
 # Model catalog
 
-Transcribed from `docs/research/01-models-and-skills.md` (research date 2026-10-14). Nothing here is newer than that file.
+Transcribed from cv-kit's model research of 2026-10-14 (notes kept outside the repository). Nothing here is newer than that research.
 
 How to read the table:
 
@@ -116,7 +116,7 @@ How to read the table:
 
 ## Open items
 
-Copied from "Verification log and open items" in `docs/research/01-models-and-skills.md`.
+Copied from the verification log of that research.
 
 - Not checked at all (not in tables or marked UNVERIFIED): EasyOCR, docTR, Surya, Detectron2, MMDetection weights, SAM-HQ licence, MM-Grounding-DINO licence, LLMDet repo/weights, RT-DETRv4 repo/weights, YOLOv9 repo, DEIM/DEIMv2 HF weights, TrOCR licence, Depth Anything v1 licence, SAMURAI repo, SigLIP 3 (existence), PaliGemma 3 (existence), Qwen3.5-3.8 papers.
 - Conflicting signal to resolve before documenting: RF-DETR plus (XLarge/2XLarge) licence. rf-detr's AGENTS.md says PML 1.0 via `rfdetr_plus`; the HF tag on `Roboflow/rf-detr-seg-xxlarge` says apache-2.0.

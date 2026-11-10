@@ -1,6 +1,6 @@
 # Sources
 
-Reachability and use of the research sources, from `docs/research/02-deep-research.md` Task B. Probed 2026-10-14 from one residential IP; results can differ elsewhere.
+Reachability and use of the research sources, from cv-kit's deep-research study (task B; notes kept outside the repository). Probed 2026-10-14 from one residential IP; results can differ elsewhere.
 
 ## Tiers
 
