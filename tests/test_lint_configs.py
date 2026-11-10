@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-ASSETS = ROOT / "skills/setup/assets"
+ASSETS = ROOT / "skills/develop/assets"
 
 GOOD_PY = '''\
 """Crop helpers for detector inputs."""

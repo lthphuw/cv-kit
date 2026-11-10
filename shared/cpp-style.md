@@ -61,7 +61,7 @@ All code fragments in this file are cv-kit's own.
 
 ## Tooling
 
-The `setup` skill installs three files into a project; together they enforce every rule whose
+`develop` installs three files into a project (`skills/develop/references/lint-setup.md`); together they enforce every rule whose
 *Check* names a tool.
 
 | File | What it enforces |

@@ -84,7 +84,7 @@ def _project_facts(path: Path) -> list[str]:
     rules = path / ".claude" / "rules"
     count = len(list(rules.glob("*.md"))) if rules.is_dir() else 0
     lines.append(f"Project rules: {count} file{'s' if count != 1 else ''} in .claude/rules" if count
-                 else "Project rules: not installed (run /cv-kit:setup)")
+                 else "Project rules: not installed in .claude/rules (develop reads the plugin's rules/)")
     return lines
 
 

@@ -198,7 +198,7 @@ class TestSkills:
             assert needle in text, needle
 
     def test_setup_offers_the_commit_guard_settings(self):
-        text = (ROOT / "skills/setup/references/settings.md").read_text(encoding="utf-8")
+        text = (ROOT / "skills/develop/references/settings.md").read_text(encoding="utf-8")
         for needle in ("permissions", "ask", "Bash(git commit *)", "Bash(git push *)", "attribution"):
             assert needle in text
 
@@ -234,6 +234,30 @@ class TestCommitRule:
         result = subprocess.run([sys.executable, str(ROOT / "hooks/block_trailers.py")], input=json.dumps(call),
                                 capture_output=True, text=True, timeout=20)
         assert result.returncode == 0 and "deny" not in result.stdout
+
+
+class TestNoSetupSkill:
+    """develop sets a project up; there is no separate setup skill."""
+
+    SHIPPED = [ROOT / "README.md", ROOT / "AGENTS.md", *ROOT.glob("skills/**/*.md"), *ROOT.glob("agents/*.md"),
+               *ROOT.glob("shared/*.md"), *ROOT.glob("rules/*.md"), *ROOT.glob("hooks/*.md"), *ROOT.glob("scripts/*.py"),
+               ROOT / "evals/README.md"]
+
+    def test_there_is_no_setup_skill(self):
+        assert not (ROOT / "skills/setup").exists()
+        for path in self.SHIPPED:
+            assert "/cv-kit:setup" not in path.read_text(encoding="utf-8"), path
+
+    def test_develop_reads_the_plugin_rules_and_offers_the_project_setup(self):
+        text = (ROOT / "skills/develop/SKILL.md").read_text(encoding="utf-8")
+        assert "${CLAUDE_SKILL_DIR}/../../rules/" in text and "references/project-setup.md" in text
+        setup = (ROOT / "skills/develop/references/project-setup.md").read_text(encoding="utf-8")
+        for needle in ("install_rules.py", "lint-setup.md", "settings.md", "never overwrite"):
+            assert needle in setup, needle
+
+    def test_lint_assets_live_under_develop(self):
+        assert (ROOT / "skills/develop/assets/python/ruff.toml").is_file()
+        assert (ROOT / "skills/develop/assets/cpp/cmake/cv_kit_strict.cmake").is_file()
 
 
 class TestDocs:

@@ -1,7 +1,7 @@
 # cv-kit trigger evals
 
 A small `claude plugin eval` suite that checks which cv-kit skill Claude picks for a request, and that it
-picks none when the request is not for cv-kit. Twenty cases: each model-invocable skill has at least one case
+picks none when the request is not for cv-kit. Nineteen cases: each model-invocable skill has at least one case
 where it must fire and one where it must not, plus confusable pairs and two off-topic requests. Nine cases also
 check a rule of the skill's first reply, and two (21, 22) check routing.
 
@@ -12,11 +12,10 @@ files offline on every run of the test suite.
 
 | Skill | Must fire in | Must not fire in |
 | --- | --- | --- |
-| `develop` | 01 (feature), 02 (C++ bug), 03 (refactor), 21, 22 (routing) | 11 (a review request) |
+| `develop` | 01 (feature), 02 (C++ bug), 03 (refactor), 21, 22 (routing), 23 (project setup) | 11 (a review request) |
 | `research` | 04, 05, 06, 07 (one benchmark claim), 08 (image embeddings), 10 (clone and compare) | 09 (text-only search) |
 | `review` | 11 | 03 (a refactor request) |
 | `figure` | 14, 15 (model v1 vs v2) | 16 (a matplotlib plot) |
-| `setup` | never (user-invoked only) | 17, 18 |
 | any cv-kit skill | | 19, 20 |
 
 Behaviour graders: 01 (a test file is edited before `vision/utils.py`, and the tests cover an empty result and a box
@@ -29,8 +28,8 @@ rule ID, and the throw, detached thread, race or leak is Critical),
 
 Cases 21 and 22 grant the `Agent` tool and check routing: which agent is dispatched and with which `model`. The
 check is on the call, not on what the agent then does. Confirm the model that actually ran
-with `/tasks` in a live session. Eval runs load no `.claude/` folder or `CLAUDE.md`, so rules installed by `setup`
-are not active in them.
+with `/tasks` in a live session. Eval runs load no `.claude/` folder or `CLAUDE.md`, so rules copied into
+`.claude/rules/` are not active in them.
 
 ## Layout
 

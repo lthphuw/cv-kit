@@ -22,7 +22,7 @@ Facts read just now (a fact marked not found is not a finding):
    `ruff format --check`, `mypy`. C++: `clang-format --dry-run --Werror`, `clang-tidy` (needs
    `compile_commands.json`), the project's build with its warning flags, and the tests. Go: `gofmt -l`, `go vet`
    and `go test`. Record each command and its
-   result; if a tool did not run, say so. Missing or unconfigured tools: offer `/cv-kit:setup`.
+   result; if a tool did not run, say so. Missing or unconfigured tools: say which; `/cv-kit:develop` adds cv-kit's configs after a yes.
 3. **Dispatch the `reviewer` agent** (`model` `sonnet`, `effort` `high`; `model` `opus` when the change touches
    concurrency, memory safety, security or a number the user will publish, implements an `architect` design, or was
    written by an `opus` engineer). It has no shell, so paste the diff, or give the files with their changed line

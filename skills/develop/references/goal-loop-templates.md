@@ -25,7 +25,7 @@ Keep tests in the foreground: a background run defers the judge's check.
 ## /loop: repeat on a schedule
 
 `/loop [interval] [prompt]` re-runs a prompt while the session stays open; with no interval Claude paces itself and
-can end the loop. It runs skills the model may invoke, so `/cv-kit:setup` (manual only) arrives as plain text.
+can end the loop.
 
 ```
 /loop 30m /cv-kit:review the diff against main, report only new Critical or Major findings
@@ -36,7 +36,7 @@ can end the loop. It runs skills the model may invoke, so `/cv-kit:setup` (manua
 ## Headless run (`claude -p`)
 
 For work that runs while nobody watches. The goal runs to completion in one invocation; the log keeps each message.
-Set the permissions in advance (`/cv-kit:setup`); a headless run cannot answer a prompt.
+Set the permissions in advance (`settings.md`); a headless run cannot answer a prompt.
 
 ```
 claude -p "/goal follow /cv-kit:develop. clamp_boxes in vision/utils.py clips xyxy boxes; a new pytest test failed first, then `pytest -q` exits 0. Do not commit. Or stop after 15 turns." --output-format stream-json --verbose > /tmp/cv-kit-clamp-boxes.log 2>&1

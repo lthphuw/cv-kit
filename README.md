@@ -36,7 +36,6 @@ One live row per agent: `icon agent (model effort) task tokens elapsed`, with `�
 ```
 /plugin marketplace add lthphuw/cv-kit
 /plugin install cv-kit@cv-kit
-/cv-kit:setup python                  # once per project: python | cpp | both
 
 /plugin marketplace update cv-kit     # update
 /reload-plugins
@@ -52,10 +51,10 @@ Name a skill, or describe the work: "NMS crashes on empty input" loads `develop`
 | Kind | Name | Example prompt | You get |
 |:-----|:-----|:---------------|:--------|
 | Skill | `develop` | `NMS in src/post/nms.cc crashes on zero detections` | failing test → fix → literal `ctest` output |
+| | | `set this repo up with strict ruff and mypy` | lint configs and `.claude/rules/` after your yes, existing files kept |
 | Skill | `research` | `which detector for 30 FPS on Orin NX, Apache-2.0` | short report, every number re-checked against its source |
 | Skill | `review` | `train/val split in data/split.py, any leakage?` | `[Severity] RULE-ID path:line` findings → `Blocking: N Critical, M Major` |
 | Skill | `figure` | `low-level figure with tensor shapes for the neck and head` | hand-drawn HTML + PNG (SVG for papers), like the one above |
-| Skill | `setup` | `/cv-kit:setup cpp` | `.claude/rules/` + lint configs, existing files kept |
 
 ## Flows
 
@@ -118,7 +117,8 @@ commit   when you ask ─► type(scope): description ─► git / svn commit
                                  block_trailers.py ──────┘  refuses AI trailers
 ```
 
-The commit rule is `rules/commit-vcs.md` (Conventional Commits 1.0.0); `/cv-kit:setup` copies it into `.claude/rules/`.
+The commit rule is `rules/commit-vcs.md` (Conventional Commits 1.0.0). `develop` reads it from the plugin; copied into
+`.claude/rules/`, it holds in every session.
 
 ## Agents
 
@@ -157,7 +157,8 @@ mode.
 ```
 
 - Nothing is committed or pushed unless the condition says so.
-- With the `permissions.ask` rules from `/cv-kit:setup`, `git commit`, `git push` and `gh pr create` still prompt.
+- With the `permissions.ask` rules `develop` offers for unattended runs, `git commit`, `git push` and `gh pr create`
+  still prompt.
 - Two failed fixes stop the run with the evidence; `touch .cv-kit-stop` halts the loop above.
 
 Draft one with `/cv-kit:develop write the /goal line for the NMS crash`. Templates:
@@ -178,7 +179,7 @@ Details and known gaps: `hooks/README.md`.
 
 | What | Where | How |
 |:-----|:------|:----|
-| Rules, lint configs | `/cv-kit:setup` | never overwrites; refresh: `python3 scripts/install_rules.py <project> --force` |
+| Rules, lint configs | ask `develop` to set the project up | never overwrites; refresh: `python3 scripts/install_rules.py <project> --force` |
 | Models | `model:` in `agents/*.md` | aliases `haiku` `sonnet` `opus`, or a full model ID to pin |
 | Concise mode, Progress, Next | `hooks/hooks.json` | remove the two `concise.py` entries to turn off |
 | Evidence ledger | `~/.cache/cv-kit/gate/` | move with `CV_KIT_GATE_DIR` |

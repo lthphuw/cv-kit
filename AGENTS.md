@@ -8,7 +8,8 @@ How to change cv-kit without breaking the plugin or its prompts.
   must earn them.
 - `hooks/concise.md` and `hooks/progress.md` are injected into every session (and `concise.md` into every subagent).
   `tests/test_concise_hook.py` caps them at 2,200 and 1,200 characters.
-- `rules/` is copied into a project's `.claude/rules/` by `/cv-kit:setup`; a plugin cannot ship rules directly.
+- `rules/` is read by `develop` from the plugin. A plugin cannot ship rules directly, so `scripts/install_rules.py`
+  copies them into a project's `.claude/rules/` when the user asks.
 - `shared/` holds the catalogues the prompts point at. `shared/prose.md` is the one source for writing style; the
   regex part of it lives in `PROSE_TELLS` in `scripts/lint_research.py`. Change both together.
 - `evals/` holds the trigger and behaviour cases; `evals/README.md` explains the format.

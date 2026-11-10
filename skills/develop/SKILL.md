@@ -1,6 +1,6 @@
 ---
 name: develop
-description: Use when writing, fixing, refactoring, testing or scoping code in Python, C++ or Go (computer vision or not), or finding where code reads or uses something before a change, before touching any code, or writing the /goal or /loop line for unattended work. Applies test-first, systematic debugging, simplicity and evidence, and sends the work to agents with a model and effort sized to the task.
+description: Use when writing, fixing, refactoring, testing or scoping code in Python, C++ or Go (computer vision or not), or finding where code reads or uses something before a change, before touching any code, writing the /goal or /loop line for unattended work, or setting a project up with cv-kit's rules, lint configs and permissions. Applies test-first, systematic debugging, simplicity and evidence, and sends the work to agents with a model and effort sized to the task.
 argument-hint: "[feature, bug or goal]"
 allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project_facts.py *) Bash(python3 ${CLAUDE_PLUGIN_ROOT}/hooks/evidence_gate.py *)
 ---
@@ -26,13 +26,13 @@ Treat a fact above as true only for what it says; "not found" means look yoursel
 ## Flow
 
 1. **Size it.** A clear one-line change, where the user names the line and the change: do it. A bug whose cause is unknown is never a one-line change, however small the files. New or vague: read `${CLAUDE_SKILL_DIR}/references/scoping.md`, ask one question at a time, write the brief back, and wait for a yes before code.
-2. **Look first.** Read the project's rules and test setup, then run the existing tests for a baseline.
+2. **Look first.** Read the project's rules and test setup, then run the existing tests for a baseline. With no `.claude/rules/`, read the plugin's own in `${CLAUDE_SKILL_DIR}/../../rules/`: `principles.md`, `evidence.md`, and the style and test rules of each language you touch. A language with no linter config: offer cv-kit's, as `${CLAUDE_SKILL_DIR}/references/project-setup.md` says, and add it only after a yes.
 3. **Design, only when packages depend on each other.** Two or more packages that share an interface or a data flow: `architect` designs it and you wait for the user's yes, as "Route the work" says. One package, or packages that share nothing: skip this, the brief is the design.
 4. **Red, green, refactor**: by you for a one-line change, otherwise by the `engineer` you brief. Read the test reference that applies before the first test: `${CLAUDE_SKILL_DIR}/references/python-testing.md` (pytest), `cpp-testing.md` (GoogleTest) or `go-testing.md` (`go test`). Refactors follow `refactor.md`. `/simplify` is an optional last pass once the tests are green.
 5. **Verify.** Run the tests and linters. Then review by the risk rules in "Route the work"; a one-line change needs no reviewer, because its test output is the check. The reviewer has no shell: paste the diff and the tool output, and the design's `Interfaces` and `Invariants` when there was one, not your conclusions. End with the report: for a bug, the cause in one sentence with `path:line`; the tests added, by name, and what each pins; the change; and the literal output of each command, or that it did not run and why.
 6. **Commit** only when asked, as `${CLAUDE_SKILL_DIR}/../../rules/commit-vcs.md` says: Conventional Commits, no trailers.
 
-Need sourced evidence about a model, paper or benchmark: `/cv-kit:research`. Need linters or rules installed in the project: `/cv-kit:setup`.
+Need sourced evidence about a model, paper or benchmark: `/cv-kit:research`. Asked to set the project up: follow `${CLAUDE_SKILL_DIR}/references/project-setup.md`.
 
 ## Route the work
 
@@ -86,7 +86,7 @@ When the prompt came from `/goal <condition>` or a `/loop`, nobody is there to a
 3. **Bound it.** End with `Or stop after N turns` (fix 15, feature 25, research 30), and add `After two failed fixes, stop and report the literal output.`
 4. **Constrain it.** Name what must not change: other test files, `no commit`, `no push`, no code run from a clone.
 5. **Loops.** Start with `first run test -f .cv-kit-stop and stop if it exists`, so `touch .cv-kit-stop` halts it. A watch-only loop says `change nothing`.
-6. **Headless, only if the user will be away.** Give `claude -p "/goal ..." --output-format stream-json --verbose` with a log path outside the repo. Permissions must be set in advance (`/cv-kit:setup`).
+6. **Headless, only if the user will be away.** Give `claude -p "/goal ..." --output-format stream-json --verbose` with a log path outside the repo. Permissions must be set in advance (`${CLAUDE_SKILL_DIR}/references/settings.md`).
 7. **Size.** At most 4,000 characters. Keep tests in the foreground: a background run defers the judge.
 
 Output: the block, then `Paste it after /goal or /loop, in auto mode.` Examples: `${CLAUDE_SKILL_DIR}/references/goal-loop-templates.md`.
