@@ -1,21 +1,13 @@
 # cv-kit
 
-A Claude Code plugin for computer-vision engineers who write Python, edge C++ and Go.
+[![validate](https://github.com/lthphuw/cv-kit/actions/workflows/validate.yml/badge.svg)](https://github.com/lthphuw/cv-kit/actions/workflows/validate.yml)
+[![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
-**One prompt → agents sized to the task → tested code, sourced numbers, strict review, clean commits.**
+A Claude Code plugin for computer-vision engineers who write Python, edge C++ and Go. One prompt gives you tested
+code, sourced model research, a strict review or a clean commit, with each step handed to the cheapest agent that
+can do it.
 
-```
-┌──────────┐    ┌─────────────────┐    ┌──────────────────────┐    ┌─────────────────────────┐
-│  prompt  │───►│      skill      │───►│        agents        │───►│         result          │
-│  plain   │    │ develop  review │    │ explorer   engineer  │    │ green tests + output    │
-│  words   │    │ research figure │    │ researcher reviewer  │    │ report, claims checked  │
-│          │    │ commit   setup  │    │ architect  verifier  │    │ findings · figure       │
-└──────────┘    └─────────────────┘    └──────────────────────┘    └────────────┬────────────┘
-     ▲                                                                          │
-     └──────────────────────────── Next: prompts to paste ◄─────────────────────┘
-
-hooks, every turn: concise replies · no "done" without a green test · no AI trailers · live rows
-```
+![The develop and research flows: the main thread scopes the work, read-only agents explore, design, research and review, and one agent edits code test first](docs/assets/overview.png)
 
 ## Install
 
@@ -33,81 +25,71 @@ on PATH; not the snap build, it cannot read `/tmp`).
 
 ## Skills
 
-Name a skill, or just describe the work: "NMS crashes on empty input" loads `develop`.
+Name a skill, or describe the work: "NMS crashes on empty input" loads `develop`.
 
 | Kind | Name | Example prompt | You get |
 |:-----|:-----|:---------------|:--------|
 | Skill | `develop` | `NMS in src/post/nms.cc crashes on zero detections` | failing test → fix → literal `ctest` output |
-| Skill | `research` | `which detector for 30 FPS on Orin NX, Apache-2.0` | short report, every number re-checked |
+| Skill | `research` | `which detector for 30 FPS on Orin NX, Apache-2.0` | short report, every number re-checked against its source |
 | Skill | `review` | `train/val split in data/split.py, any leakage?` | `[Severity] RULE-ID path:line` findings → `Blocking: N Critical, M Major` |
-| Skill | `figure` | `low-level figure with tensor shapes for the neck and head` | HTML + PNG (SVG for papers), unconfirmed facts labelled |
-| Skill | `commit` | `/cv-kit:commit` | preview → your yes → commit without trailers |
+| Skill | `figure` | `low-level figure with tensor shapes for the neck and head` | hand-drawn HTML + PNG (SVG for papers), like the one above |
+| Skill | `commit` | `/cv-kit:commit` | preview → your yes → git or SVN commit without AI trailers |
 | Skill | `setup` | `/cv-kit:setup cpp` | `.claude/rules/` + lint configs, existing files kept |
 
 ## Agents
 
-You never pick an agent: the skill does, sizing model and effort to the task.
+You never pick an agent: the skill does, and sizes the model and effort to the task.
 
 | Kind | Name | Model · effort | Job |
 |:-----|:-----|:---------------|:----|
 | Agent | `explorer` | haiku `▰▱▱▱▱` | find and summarise code, logs, docs · read-only |
-| Agent | `architect` | opus `▰▰▰▱▱` · public API, threading: `▰▰▰▰▱` | options, flow, interfaces, packages · read-only, only for packages that depend on each other |
+| Agent | `architect` | opus `▰▰▰▱▱` · public API, threading: `▰▰▰▰▱` | options, flow, interfaces, work packages · read-only |
 | Agent | `engineer` | sonnet `▰▰▰▱▱` · mechanical: `▰▰▱▱▱` · hard: opus `▰▰▰▱▱` | one change, test first, from a full brief |
+| Agent | `reviewer` | sonnet `▰▰▰▱▱` · risky or designed: opus `▰▰▰▱▱` | findings with rule IDs · read-only |
 | Agent | `researcher` | sonnet `▰▰▰▱▱` | sourced evidence for one candidate model |
 | Agent | `claim-verifier` | haiku `▰▰▱▱▱` | re-reads one candidate's sources, blind to the claimed value |
-| Agent | `reviewer` | sonnet `▰▰▰▱▱` · risky or designed: opus `▰▰▰▱▱` | read-only review |
 
-Effort: `▰▱▱▱▱` low · `▰▰▱▱▱` medium · `▰▰▰▱▱` high · `▰▰▰▰▱` xhigh · `▰▰▰▰▰` max
+Effort: `▰▱▱▱▱` low · `▰▰▱▱▱` medium · `▰▰▰▱▱` high · `▰▰▰▰▱` xhigh
 
-### Routing by difficulty
-
-```
-                     what is still unknown after explorer looked?
-          ┌──────────────────────────────┼──────────────────────────────┐
-          ▼                              ▼                              ▼
-         read                     known spec · bug a                   hard
-   find · summarise              test can reproduce            threads · memory safety
-          │                    (box maths, NMS, perf)               cause unknown
-          ▼                              ▼                              ▼
-   explorer  haiku                engineer  sonnet                engineer  opus
-      ▰▱▱▱▱ low                     ▰▰▰▱▱ high                      ▰▰▰▱▱ high
-                                         ▼                              ▼
-                                  reviewer  sonnet                reviewer  opus
-                                    ▰▰▰▱▱ high                      ▰▰▰▱▱ high
-
-two or more packages that share an interface or a data flow?
-  ──► architect  opus ▰▰▰▱▱ high ──► your yes ──► its packages go to engineer  sonnet ▰▰▰▱▱
-
-brief = Goal · Done when · Facts · Files · Constraints · Ruled out · Mode (fix | diagnose)
-
-came back blocked?  ──► answer it, SendMessage the same agent
-failed on the brief? ──► fix the brief, same model
-failed on reasoning? ──► escalate:     sonnet ▰▰▰▱▱ ──► opus ▰▰▰▱▱ ──► opus ▰▰▰▰▱ once ──► report
-                         at most 3 attempts, never the same brief twice
-```
+- **Sonnet by default.** Opus only for a concurrency or memory-safety bug, a cause still unknown after a
+  reproduction attempt, a design, and the review of those.
+- **Design first, only when it pays.** Work that splits into packages sharing an interface or a data flow goes to
+  `architect`; you approve the design before any engineer starts.
+- **A brief, not a chat.** Every engineer gets `Goal · Done when · Facts · Files · Constraints · Ruled out · Mode`.
+- **Re-brief before escalating.** Failed on the brief: fix it, same model. Failed on the reasoning: sonnet → opus →
+  opus `▰▰▰▰▱` once, then a report. At most three attempts.
 
 ## Flows
 
 ### `/cv-kit:develop`
 
 ```
-/cv-kit:develop add iou(a, b) and clamp(box, w, h) to vision/
+/cv-kit:develop add a tracker between detection and the writer
   │
-  ├─ 1 SIZE ──── one-liner? ─┬─ yes ─► do it inline, then 5
+  ├─ 1 SIZE ──── one-liner? ─┬─ yes ─► do it inline ─► 5
   │                          └─ no ──► one question at a time ─► brief ─► your yes
-  │
-  ├─ 2 LOOK ──── project rules · test setup · baseline test run          explorer
-  │
-  ├─ 3 DESIGN ── packages that share an interface: options · flow ·          architect
-  │              interfaces · packages ─► your yes
-  │
-  ├─ 4 BUILD ─── ┌─────┐    ┌───────┐    ┌──────────┐                    engineer × N
-  │              │ red │───►│ green │───►│ refactor │                    in parallel,
-  │              └─────┘    └───────┘    └──────────┘                    one per file set
-  │
-  ├─ 5 VERIFY ── tests + linters ─► review by risk                       reviewer
-  │
+  ├─ 2 LOOK ──── project rules · test setup · baseline test run         explorer
+  ├─ 3 DESIGN ── only when packages share an interface or a data flow   architect
+  │              options · flow · interfaces · packages ─► your yes
+  ├─ 4 BUILD ─── red ─► green ─► refactor, one brief per package        engineer × N
+  │              independent packages in parallel, each in a worktree
+  ├─ 5 VERIFY ── tests + linters ─► review of the pasted diff           reviewer
   └─ 6 REPORT ── cause at path:line · tests by name · literal command output
+```
+
+### Who gets the work
+
+```
+task ─┬─ find · read · summarise ───────────────► explorer  haiku  ▰▱▱▱▱
+      ├─ rename · config · pinned behaviour ────► engineer  sonnet ▰▰▱▱▱
+      ├─ known spec · bug a test reproduces ────► engineer  sonnet ▰▰▰▱▱ ─► reviewer sonnet ▰▰▰▱▱
+      ├─ packages share an interface or flow ───► architect opus   ▰▰▰▱▱ ─► your yes
+      │                                           ─► engineers sonnet ▰▰▰▱▱ ─► reviewer opus ▰▰▰▱▱
+      └─ threads · memory · cause unknown ──────► engineer  opus   ▰▰▰▱▱ ─► reviewer opus   ▰▰▰▱▱
+
+came back blocked?   ──► answer it, continue the same agent
+failed on the brief? ──► fix the brief, same model
+failed on reasoning? ──► sonnet ▰▰▰▱▱ ──► opus ▰▰▰▱▱ ──► opus ▰▰▰▰▱ once ──► report
 ```
 
 ### `/cv-kit:research`
@@ -117,38 +99,21 @@ failed on reasoning? ──► escalate:     sonnet ▰▰▰▱▱ ──► op
   │
   ├─ 1 FRAME ──────── brief.md: task · metric · split · hardware · latency · licence
   ├─ 2 SCOUT ──────── arXiv · HF Papers · CVF · GitHub ─► one line per candidate
-  ├─ 3 SHORTLIST ──── cut by licence ─► task ─► weights ─► traceable numbers ─► stack
-  │                   ─► your yes (≤ 6 go on)
-  ├─ 4 DEEP-READ ──── researcher   researcher   researcher               one per candidate,
-  │                    model A      model B      model C                 in parallel
-  ├─ 5 CROSS-CHECK ── claim-verifier per candidate re-reads its sources without seeing the claimed value
-  └─ 6 REPORT ─────── research/<slug>/report.md     overview · ≤ 7 points · table · ≤ 3 next steps
-                      research/<slug>/appendix.md   exclusions · caveats · claims ledger · sources
+  ├─ 3 SHORTLIST ──── cut by licence ─► task ─► weights ─► traceable numbers ─► your yes (≤ 6)
+  ├─ 4 DEEP-READ ──── researcher A   researcher B   researcher C       one per candidate, in parallel
+  ├─ 5 CROSS-CHECK ── verifier A     verifier B     verifier C         blind to the claimed values
+  │                   lint: confirmed | differs | wrong-paper | absent | unreachable
+  └─ 6 REPORT ─────── report.md (overview · ≤ 7 points · table) + appendix.md (ledger · sources)
 
 one claim to check? ─► steps 4–5 only ─► confirmed | partly right | contradicted | not found
 ```
 
-### `/cv-kit:review`
+### `/cv-kit:review` and `/cv-kit:commit`
 
 ```
-/cv-kit:review the diff against main
-  │
-  ├─ 1 SCOPE ──── paths · uncommitted diff · branch vs base · pull request
-  ├─ 2 TOOLS ──── ruff · mypy · clang-format · clang-tidy · build · tests   (only those installed)
-  ├─ 3 REVIEW ─── reviewer sonnet ▰▰▰▱▱   opus: concurrency, memory safety, security, published numbers, designed changes
-  │               large diff ─► one reviewer per directory, in parallel
-  ├─ 4 REPORT ─── [Critical] CPP-ERR-8 src/infer/engine.cc:88 ─► What · Trigger · Fix
-  │               Blocking: 1 Critical, 0 Major
-  └─ 5 FIX ────── only after your yes: mechanical directly, structural through develop
-
-in CI: claude -p "/cv-kit:review the diff against origin/main"
-```
-
-### `/cv-kit:figure` and `/cv-kit:commit`
-
-```
-figure   read code + configs ─► ask what changes the figure ─► HTML ─► PNG ─► look at it ─► report
-         modes: high-level · low-level · pipeline · whole model · delta between two versions
+review   scope ─► installed linters and tests ─► reviewer reads the pasted diff ─► findings
+         [Critical] CPP-ERR-8 src/infer/engine.cc:88 ─► What · Trigger · Fix
+         Blocking: 1 Critical, 0 Major ─► fixes only after your yes
 
 commit   branch + files + message ─► STOP ─► your yes ─► git / svn commit
                                                               ▲
@@ -157,82 +122,41 @@ commit   branch + files + message ─► STOP ─► your yes ─► git / svn c
 
 ## What you see
 
-```
-while agents run: one live row each, refreshed about every 5 s
+![Live agent rows during a develop run: explorer, architect, two engineers in parallel, then the reviewer](docs/assets/live-rows.gif)
 
-  ◐ engineer (sonnet ▰▰▱▱▱)  Add iou with tests  18k  1m42s
-  │ │         │      │       │                   │    └─ elapsed (running rows only)
-  │ │         │      │       │                   └─ tokens
-  │ │         │      │       └─ task
-  │ │         │      └─ effort
-  │ │         └─ model
-  │ └─ agent
-  └─ ◐◓◑◒ running (turns while tokens grow)   ○ stalled   ✓ done   ✗ failed   ■ killed
-     a finish flashes, then done and killed rows fade; narrow rows drop tokens, effort, model
+One live row per agent, rendered here from `hooks/agent_status.py` output: `icon agent (model effort) task tokens
+elapsed`, with `◐` running, `○` stalled, `✓` done, `✗` failed, `■` killed. When an agent finishes you get a
+`Progress` line per agent; a finished task ends with `Summarization` (results with their evidence) and `Next`
+(prompts to paste).
 
-when one finishes                      at the end
-  ● Progress (1/2 done):                 ● Summarization:
-    - engineer#1 iou: 5 tests pass         - iou in vision/utils.py, tests in tests/test_iou.py
-    - engineer#2 clamp: running            - pytest -q: 9 passed
-                                           - Nothing is committed.
-                                           Next:
-                                           - /cv-kit:review the diff against main
-                                           - /cv-kit:commit
-```
+## Unattended runs
 
-`research` prints only its Overview, the report path and `Next:`.
-
-## Autonomous runs
-
-`/goal <condition>` runs until a judge model says it holds; `/loop [interval] <prompt>` repeats. Use auto mode.
+`/goal <condition>` runs until a judge model says the condition holds; `/loop [interval] <prompt>` repeats. Use auto
+mode.
 
 ```
-/goal follow /cv-kit:develop … Or stop after 25 turns.
-  │
-  ├─ turn 1      develop: brief from the condition, baseline tests
-  ├─ turn 2..n   engineer: failing test ─► fix ─► green        Progress per agent
-  ├─ turn n+1    reviewer: Blocking: 0 Critical, 0 Major
-  ├─ turn n+2    commit: preview ─► your yes                    only if the condition says commit
-  ├─ turn n+3    git push · gh pr create                        only if it says push
-  └─ end         judge reads the literal test output ─► met, or stop at the turn limit
+/goal follow /cv-kit:develop. clamp_boxes in vision/utils.py clips xyxy boxes and drops empty ones; a new pytest test failed first, then `pytest -q` exits 0 and `ruff check .` is clean. Then /cv-kit:review the diff against main until it ends with `Blocking: 0 Critical, 0 Major`. Print each output. Or stop after 25 turns.
 ```
-
-Change → pull request:
-
-```
-/goal follow /cv-kit:develop. clamp_boxes in vision/utils.py clips xyxy boxes and drops empty ones; a new pytest test failed first, then `pytest -q` exits 0 and `ruff check .` is clean. Then /cv-kit:review the diff against main until it ends with `Blocking: 0 Critical, 0 Major`. Then /cv-kit:commit, push the branch and open a PR with `gh pr create`. Print each output. Or stop after 25 turns.
-```
-
-Watch a branch, change nothing:
 
 ```
 /loop 15m first run `test -f .cv-kit-stop` and stop if it exists; otherwise /cv-kit:review the diff against main, report only new Critical or Major findings, change nothing
 ```
 
-| Guard | Effect |
-|:------|:-------|
-| no "commit" / "push" in the condition | never commits or pushes |
-| `/cv-kit:commit` | still shows its preview |
-| `permissions.ask` from `/cv-kit:setup` | `git commit`, `git push`, `gh pr create` still prompt, even in auto mode |
-| two failed fixes | stops and reports the evidence |
-| `touch .cv-kit-stop` | halts the loop above |
+- Nothing is committed or pushed unless the condition says so, and `/cv-kit:commit` still shows its preview.
+- With the `permissions.ask` rules from `/cv-kit:setup`, `git commit`, `git push` and `gh pr create` still prompt.
+- Two failed fixes stop the run with the evidence; `touch .cv-kit-stop` halts the loop above.
 
-Draft one: `/cv-kit:develop write the /goal line for the NMS crash`. Templates:
+Draft one with `/cv-kit:develop write the /goal line for the NMS crash`. Templates:
 `skills/develop/references/goal-loop-templates.md`.
 
 ## Hooks
 
-```
-SessionStart          PreToolUse: Bash       PostToolUse: edit, Bash      Stop
-──────┬─────────────────────┬──────────────────────────┬─────────────────────┬──────────►
-      ▼                     ▼                          ▼                     ▼
-concise.py            block_trailers.py        evidence_gate.py        evidence_gate.py
-short replies,        refuses a commit         code edit ─► stale      stale? hold the
-STATUS / Progress /   with an AI trailer       green test ─► fresh     turn, once
-Next blocks
-agent_status.py
-live rows
-```
+| Hook | Runs | Does |
+|:-----|:-----|:-----|
+| `concise.py` | session and agent start | short replies; the `Progress`, `Summarization` and `Next` blocks |
+| `block_trailers.py` | before each Bash call | refuses a commit that carries an AI trailer |
+| `evidence_gate.py` | after edits and Bash, at stop | code changed after the last green test: holds the turn, once |
+| `agent_status.py` | status line | the live agent rows |
 
 Details and known gaps: `hooks/README.md`.
 
@@ -244,7 +168,7 @@ Details and known gaps: `hooks/README.md`.
 | Models | `model:` in `agents/*.md` | aliases `haiku` `sonnet` `opus`, or a full model ID to pin |
 | Concise mode, Progress, Next | `hooks/hooks.json` | remove the two `concise.py` entries to turn off |
 | Evidence ledger | `~/.cache/cv-kit/gate/` | move with `CV_KIT_GATE_DIR` |
-| Live rows | plugin `settings.json` | your own `subagentStatusLine` wins; `NO_COLOR=1` drops colour; tick memory in `~/.cache/cv-kit/rows/` |
+| Live rows | plugin `settings.json` | your own `subagentStatusLine` wins; `NO_COLOR=1` drops colour |
 
 Lint configs tested with ruff 0.17.2, mypy 2.4.0, clang-format and clang-tidy 23.1.3, CMake 4.4, GCC 13.3.
 
@@ -252,12 +176,11 @@ Lint configs tested with ruff 0.17.2, mypy 2.4.0, clang-format and clang-tidy 23
 
 - Evidence gate: a nudge, it cannot tell the right tests ran.
 - Commit hook: gaps such as `--amend --no-edit` and `bash -c` (`hooks/README.md`).
-- Live rows: need the SessionStart hook (`${CLAUDE_PLUGIN_ROOT}` is empty in `subagentStatusLine`, Claude Code
-  2.1.317); off in untrusted folders and under `disableAllHooks`.
+- Live rows: need the SessionStart hook; off in untrusted folders and under `disableAllHooks`.
 - Progress, Summarization, Next: model-written, one can be skipped.
 - Catalogue rows marked `UNVERIFIED` are unchecked; licences change.
 - No training, benchmark harness or hardware measurement: you run those.
-- Cost: `architect` runs on Opus, only for multi-package work; `engineer` and `reviewer` use Opus only for the Hard rows; the eval suite calls the API (run by hand).
+- Cost: `architect` and the Hard rows of `engineer` and `reviewer` run on Opus; the eval suite calls the API.
 
 ## Development
 
@@ -269,7 +192,8 @@ claude plugin validate . --strict
 ```
 
 CI runs the same. Change the plugin test first; run `scripts/run_evals.sh` before a release. Reference material:
-`shared/`, `hooks/README.md`, `evals/README.md`, `docs/research/`.
+`shared/`, `hooks/README.md`, `evals/README.md`, `docs/research/`. The overview figure is built from
+`docs/figures/cv-kit-overview.figure.js` with the `figure` skill's own scripts.
 
 ## Licence
 

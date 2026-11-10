@@ -6,7 +6,7 @@
     {
       "name": "cv-kit",
       "source": "./",
-      "description": "Test-first development, evidence-backed CV research, strict review and commit discipline.",
+      "description": "Test-first development in Python, edge C++ and Go, sourced computer-vision research, strict review, architecture figures and clean commits.",
       "category": "development"
     }
   ]
