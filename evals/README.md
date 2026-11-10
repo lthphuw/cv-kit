@@ -1,9 +1,9 @@
 # cv-kit trigger evals
 
 A small `claude plugin eval` suite that checks which cv-kit skill Claude picks for a request, and that it
-picks none when the request is not for cv-kit. Twenty-two cases: each model-invocable skill has at least one case
-where it must fire and one where it must not, plus confusable pairs and two off-topic requests. Eleven cases also
-check one rule of the skill's first reply.
+picks none when the request is not for cv-kit. Twenty cases: each model-invocable skill has at least one case
+where it must fire and one where it must not, plus confusable pairs and two off-topic requests. Nine cases also
+check a rule of the skill's first reply, and two (21, 22) check routing.
 
 The suite runs by hand before a release, not in CI (see "Why not in CI"). `tests/test_evals.py` checks the
 files offline on every run of the test suite.
@@ -15,7 +15,6 @@ files offline on every run of the test suite.
 | `develop` | 01 (feature), 02 (C++ bug), 03 (refactor), 21, 22 (routing) | 11 (a review request) |
 | `research` | 04, 05, 06, 07 (one benchmark claim), 08 (image embeddings), 10 (clone and compare) | 09 (text-only search) |
 | `review` | 11 | 03 (a refactor request) |
-| `commit` | 12 | 13 (release notes) |
 | `figure` | 14, 15 (model v1 vs v2) | 16 (a matplotlib plot) |
 | `setup` | never (user-invoked only) | 17, 18 |
 | any cv-kit skill | | 19, 20 |
@@ -25,7 +24,7 @@ outside the image), 02 (a test file is edited before `src/post/nms.cc`, and the 
 shared cache unless asked), 04 (every named model carries a licence; no benchmark number from memory), 06 (asks
 for the brief; no number from memory), 07 (does not settle the claim from memory), 10 (clones into
 `research/<slug>/`, records the commit, runs nothing from the clone), 11 (findings carry a severity and a `CPP-`
-rule ID, and the throw, detached thread, race or leak is Critical), 12 (no trailer in the suggested message),
+rule ID, and the throw, detached thread, race or leak is Critical),
 14 (says the code is missing instead of inventing the architecture).
 
 Cases 21 and 22 grant the `Agent` tool and check routing: which agent is dispatched and with which `model`. The
@@ -65,7 +64,7 @@ scripts/run_evals.sh --model <model to release against> --max-cost-usd <ceiling>
 ```
 
 Do not run a bare `claude plugin eval`. An eval run removes `Bash` unless the operator grants it, and a skill's own
-`allowed-tools` cannot widen that. `develop`, `review` and `commit` read project facts with a `!` command, so without
+`allowed-tools` cannot widen that. `develop` and `review` read project facts with a `!` command, so without
 the grant their `Skill` call returns `Permission to use Bash has been denied` and the skill body never loads. The
 `<skill>-fired` grader still passes, and every behaviour grader then measures the model alone. The first full run of
 this suite (2026-10-24, bare command) showed exactly that: the `develop` and `review` behaviour cases 02, 03, 11 and

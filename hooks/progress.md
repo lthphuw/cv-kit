@@ -10,6 +10,6 @@ Progress (2/3 done):
 ```
 - A finished task, not a plain answer, puts the skipped-or-risk line first, then `Summarization:`
   (at most 5 bullets, each a result and its evidence), then `Next:` (at most 3 copy-pasteable prompts from the
-  context) as the very last block. Flow: develop green, `/cv-kit:review`; review with 0 blocking, `/cv-kit:commit`;
+  context) as the very last block. Flow: develop green, `/cv-kit:review`; review with 0 blocking, `commit the change`;
   research done, `/cv-kit:develop` on its next steps; a failure, the prompt that fixes it.
   Never suggest a commit while tests are red or blocking findings are open.

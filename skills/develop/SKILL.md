@@ -30,7 +30,7 @@ Treat a fact above as true only for what it says; "not found" means look yoursel
 3. **Design, only when packages depend on each other.** Two or more packages that share an interface or a data flow: `architect` designs it and you wait for the user's yes, as "Route the work" says. One package, or packages that share nothing: skip this, the brief is the design.
 4. **Red, green, refactor**: by you for a one-line change, otherwise by the `engineer` you brief. Read the test reference that applies before the first test: `${CLAUDE_SKILL_DIR}/references/python-testing.md` (pytest), `cpp-testing.md` (GoogleTest) or `go-testing.md` (`go test`). Refactors follow `refactor.md`. `/simplify` is an optional last pass once the tests are green.
 5. **Verify.** Run the tests and linters. Then review by the risk rules in "Route the work"; a one-line change needs no reviewer, because its test output is the check. The reviewer has no shell: paste the diff and the tool output, and the design's `Interfaces` and `Invariants` when there was one, not your conclusions. End with the report: for a bug, the cause in one sentence with `path:line`; the tests added, by name, and what each pins; the change; and the literal output of each command, or that it did not run and why.
-6. **Commit** only when asked, through `/cv-kit:commit`.
+6. **Commit** only when asked, as `${CLAUDE_SKILL_DIR}/../../rules/commit-vcs.md` says: Conventional Commits, no trailers.
 
 Need sourced evidence about a model, paper or benchmark: `/cv-kit:research`. Need linters or rules installed in the project: `/cv-kit:setup`.
 

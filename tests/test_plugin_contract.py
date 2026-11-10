@@ -1,6 +1,8 @@
 """Cross-file promises of the shipped plugin: model aliases, hooks, agent fields, skill wiring."""
 import json
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -169,7 +171,7 @@ class TestSkills:
     def test_argument_hint(self, skill):
         assert front(ROOT / f"skills/{skill}/SKILL.md").get("argument-hint")
 
-    @pytest.mark.parametrize("skill", ["develop", "review", "commit"])
+    @pytest.mark.parametrize("skill", ["develop", "review"])
     def test_live_facts_are_injected_and_pre_approved(self, skill):
         path = ROOT / f"skills/{skill}/SKILL.md"
         body, fm = path.read_text(encoding="utf-8"), front(path)
@@ -203,6 +205,35 @@ class TestSkills:
     def test_review_complements_the_built_in_reviews(self):
         text = (ROOT / "skills/review/SKILL.md").read_text(encoding="utf-8")
         assert "/code-review" in text and "/security-review" in text
+
+
+class TestCommitRule:
+    """Commits follow a rule and the trailer hook, not a skill: no preview step."""
+
+    RULE = (ROOT / "rules/commit-vcs.md").read_text(encoding="utf-8")
+
+    def test_there_is_no_commit_skill(self):
+        assert not (ROOT / "skills/commit").exists()
+        for path in [ROOT / "README.md", ROOT / "hooks/progress.md", *ROOT.glob("skills/**/*.md")]:
+            assert "/cv-kit:commit" not in path.read_text(encoding="utf-8"), path
+
+    def test_the_rule_is_conventional_commits(self):
+        for needle in ("Conventional Commits 1.0.0", "<type>(<scope>)!: <description>", "imperative", "72",
+                       "BREAKING CHANGE:", "Refs:", "One logical change per commit"):
+            assert needle in self.RULE, needle
+        for kind in ("feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert"):
+            assert f"`{kind}`" in self.RULE, kind
+
+    def test_the_rule_has_no_preview_step(self):
+        lowered = self.RULE.lower()
+        assert "preview" not in lowered and "wait for approval" not in lowered
+
+    def test_the_allowed_footers_pass_the_trailer_hook(self):
+        message = "fix(nms): guard empty input\n\nBREAKING CHANGE: nms returns a tuple\nRefs: #12"
+        call = {"tool_name": "Bash", "tool_input": {"command": f'git commit -m "{message}"'}}
+        result = subprocess.run([sys.executable, str(ROOT / "hooks/block_trailers.py")], input=json.dumps(call),
+                                capture_output=True, text=True, timeout=20)
+        assert result.returncode == 0 and "deny" not in result.stdout
 
 
 class TestDocs:

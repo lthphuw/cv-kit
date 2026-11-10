@@ -29,7 +29,7 @@ call that a `PreToolUse` hook blocked, unless managed settings or a Team or Ente
 
 ## Switching off Claude Code's own attribution
 
-The hook and the `commit` skill stop a trailer in a message the agent writes. Claude Code can also add its own attribution to commits and pull requests. A plugin cannot set that: the plugin documentation says only `agent` and `subagentStatusLine` take effect in a plugin's settings. Set it yourself in your user, project or local settings:
+The hook and `rules/commit-vcs.md` stop a trailer in a message the agent writes. Claude Code can also add its own attribution to commits and pull requests. A plugin cannot set that: the plugin documentation says only `agent` and `subagentStatusLine` take effect in a plugin's settings. Set it yourself in your user, project or local settings:
 
 ```json
 {

@@ -62,7 +62,7 @@ class TestProgressAndNextPrompts:
         for shape in ("Progress (2/3 done):", "- engineer#1 clamp_boxes: done", "- engineer#2 NMS crash: running",
                       "- engineer#3 loader: failed",
                       "Summarization:", "at most 5 bullets", "Next:", "at most 3", "/cv-kit:review",
-                      "/cv-kit:commit", "/cv-kit:develop"):
+                      "commit the change", "/cv-kit:develop"):
             assert shape in PROGRESS, shape
 
     def test_no_status_icons(self):

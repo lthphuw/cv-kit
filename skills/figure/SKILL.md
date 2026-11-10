@@ -55,7 +55,7 @@ internals into one box, drop side outputs, then split into an overview and one d
 5. **Look at the PNG** with the Read tool for what the checker cannot see: an arrow pointing the wrong way, an icon
    too small or on text, a label the code does not support. Fix, rebuild and look again.
 6. **Report** the mode, the HTML and PNG paths, the defaults used and any unconfirmed fact, plus "Merged: ..." and
-   "Left out: ...", and alt text for the PNG. Commit only after the user approves, through `/cv-kit:commit`.
+   "Left out: ...", and alt text for the PNG. Commit only when the user asks.
 
 ## Constraints
 

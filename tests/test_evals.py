@@ -38,12 +38,6 @@ DECOYS = ("deep-research", "superpowers:brainstorming", "superpowers:requesting-
           "figma:figure", "other:review", "develop-v2", "research-notes", "reviewer", "setup-env", "recommit")
 # Strings each regex grader must and must not find in a final reply.
 REGEX_SAMPLES = {
-    "no-trailer": (
-        ["Co-Authored-By: Claude <noreply@anthropic.com>", "Signed-off-by: A Dev <a@example.com>",
-         "🤖 Generated with [Claude Code](https://claude.com/claude-code)"],
-        ["refactor: rename load_weights to load_checkpoint", "I left out any Co-Authored-By trailer.",
-         "No Signed-off-by line, as the project asks."],
-    ),
     "tests-written": (
         ['{"type":"tool_use","name":"Edit","input":{"file_path":"/w/tests/test_utils.py","old_string":"a"}}',
          '{"type":"tool_use","name":"Edit","input":{"replace_all":false,"file_path":"/w/tests/test_utils.py"}}',

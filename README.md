@@ -4,8 +4,8 @@
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
 A Claude Code plugin for computer-vision engineers who write Python, edge C++ and Go. One prompt gives you tested
-code, sourced model research, a strict review or a clean commit, with each step handed to the cheapest agent that
-can do it.
+code, sourced model research or a strict review, with each step handed to the cheapest agent that can do it.
+Commits follow Conventional Commits, without AI trailers.
 
 ![The develop and research flows: the main thread scopes the work, read-only agents explore, design, research and review, one agent edits code test first, and notes say when each is used](docs/assets/overview.png)
 
@@ -28,7 +28,7 @@ One live row per agent: `icon agent (model effort) task tokens elapsed`, with `�
   - Nothing is committed.
   Next:
   - /cv-kit:review the diff against main
-  - /cv-kit:commit
+  - commit the change
 ```
 
 ## Install
@@ -55,7 +55,6 @@ Name a skill, or describe the work: "NMS crashes on empty input" loads `develop`
 | Skill | `research` | `which detector for 30 FPS on Orin NX, Apache-2.0` | short report, every number re-checked against its source |
 | Skill | `review` | `train/val split in data/split.py, any leakage?` | `[Severity] RULE-ID path:line` findings → `Blocking: N Critical, M Major` |
 | Skill | `figure` | `low-level figure with tensor shapes for the neck and head` | hand-drawn HTML + PNG (SVG for papers), like the one above |
-| Skill | `commit` | `/cv-kit:commit` | preview → your yes → git or SVN commit without AI trailers |
 | Skill | `setup` | `/cv-kit:setup cpp` | `.claude/rules/` + lint configs, existing files kept |
 
 ## Flows
@@ -107,17 +106,19 @@ failed on reasoning? ──► sonnet ▰▰▰▱▱ ──► opus ▰▰▰�
 one claim to check? ─► steps 4–5 only ─► confirmed | partly right | contradicted | not found
 ```
 
-### `/cv-kit:review` and `/cv-kit:commit`
+### `/cv-kit:review` and commits
 
 ```
 review   scope ─► installed linters and tests ─► reviewer reads the pasted diff ─► findings
          [Critical] CPP-ERR-8 src/infer/engine.cc:88 ─► What · Trigger · Fix
          Blocking: 1 Critical, 0 Major ─► fixes only after your yes
 
-commit   branch + files + message ─► STOP ─► your yes ─► git / svn commit
-                                                              ▲
-                                      block_trailers.py ──────┘  refuses AI trailers
+commit   when you ask ─► type(scope): description ─► git / svn commit
+                                                         ▲
+                                 block_trailers.py ──────┘  refuses AI trailers
 ```
+
+The commit rule is `rules/commit-vcs.md` (Conventional Commits 1.0.0); `/cv-kit:setup` copies it into `.claude/rules/`.
 
 ## Agents
 
@@ -155,7 +156,7 @@ mode.
 /loop 15m first run `test -f .cv-kit-stop` and stop if it exists; otherwise /cv-kit:review the diff against main, report only new Critical or Major findings, change nothing
 ```
 
-- Nothing is committed or pushed unless the condition says so, and `/cv-kit:commit` still shows its preview.
+- Nothing is committed or pushed unless the condition says so.
 - With the `permissions.ask` rules from `/cv-kit:setup`, `git commit`, `git push` and `gh pr create` still prompt.
 - Two failed fixes stop the run with the evidence; `touch .cv-kit-stop` halts the loop above.
 
