@@ -365,6 +365,53 @@ def test_markdown_links_are_not_tags():
     assert lint_report(text, [CHECKED]) == []
 
 
+# ---- prose (shared/prose.md) ----
+
+@pytest.mark.parametrize(("line", "tell"), [
+    ("RF-DETR is the pick — the latency is open.", "dash"),
+    ("RF-DETR is the pick – the latency is open.", "dash"),
+    ("RF-DETR is the pick -- the latency is open.", "dash"),
+    ("It is not just accurate, but also fast.", "not X but Y"),
+    ("Let's dive into the candidates.", "run-up"),
+    ("Here's the thing: the latency is open.", "run-up"),
+    ("I hope this helps.", "chatbot"),
+    ("Let me know if you want more candidates.", "chatbot"),
+    ("This report compares two detectors.", "about the document"),
+    ("RF-DETR is a game-changer for edge detection.", "inflation"),
+    ("Its pivotal design delves into small objects.", "AI word"),
+    ("Experts argue RF-DETR is the best choice.", "unnamed authority"),
+    ("Details are not publicly available.", "knowledge limit"),
+    ("Mô hình không chỉ nhanh mà còn chính xác.", "not X but Y"),
+    ("Hãy cùng xem các ứng viên.", "run-up"),
+])
+def test_report_prose_tells_are_errors(line, tell):
+    text = with_section(report(), "Overview", "RF-DETR is the pick. " + line + "\n")
+    errors = [e for e in lint_report(text, [CHECKED]) if "prose" in e]
+    assert len(errors) == 1 and tell in errors[0] and errors[0].startswith("report:5: prose:"), errors
+
+
+@pytest.mark.parametrize("line", [
+    "Robust to occlusion: 54.7 AP on val2017 [rf-detr-1].",
+    "The key risk is the authors' own run.",
+    "Run `python3 lint_research.py --report report.md -- x` again.",
+    "Not only RF-DETR was checked; YOLO11 has no licence fit.",
+    "See the 2024–2025 papers in appendix.md.",
+])
+def test_plain_report_prose_passes(line):
+    text = with_section(report(), "Overview", "RF-DETR is the pick. " + line + "\n")
+    assert [e for e in lint_report(text, [CHECKED]) if "prose" in e] == []
+
+
+def test_prose_check_skips_tables_and_code_blocks():
+    # The table's em dash marks an empty cell; a code block quotes text as it is.
+    text = report() + "\n```\nexperts argue — let's dive in\n```\n"
+    assert lint_report(text, [CHECKED]) == []
+
+
+def test_prose_check_applies_to_old_reports_too():
+    assert any("prose" in e for e in lint_report(LEGACY + "\nI hope this helps.\n", [CHECKED]))
+
+
 # ---- command line ----
 
 def write(path, data):
@@ -415,6 +462,15 @@ def test_cli_appendix_has_no_table_or_overview_requirement(tmp_path):
     claims = write(tmp_path / "claims.json", [GOOD])
     checks = write(tmp_path / "checks.json", [FOUND])
     assert main([claims, "--checks", checks, "--report", str(tmp_path / "report.md")]) == 0
+
+
+def test_cli_appendix_prose_tells_warn_but_do_not_fail(tmp_path, capsys):
+    (tmp_path / "report.md").write_text(report(), encoding="utf-8")
+    (tmp_path / "appendix.md").write_text("## Caveats\nExperts argue the split leaks.\n", encoding="utf-8")
+    claims = write(tmp_path / "claims.json", [GOOD])
+    checks = write(tmp_path / "checks.json", [FOUND])
+    assert main([claims, "--checks", checks, "--report", str(tmp_path / "report.md")]) == 0
+    assert "appendix.md:2: prose (warning): unnamed authority" in capsys.readouterr().err
 
 
 def test_cli_report_needs_checks(tmp_path):

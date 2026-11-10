@@ -63,7 +63,8 @@ user says yes; a run happens in a throwaway environment and its result is labell
    outside the table) and everything else goes to the appendix, `not_found` and `access_failed` included. Compare
    numbers only when dataset, split, resolution and hardware match; with fewer than two comparable candidates, do not
    rank, and make the next steps the output. Then run LINT `claims.json --checks checks-*.json --report report.md`
-   (it also checks `appendix.md`) and fix every error.
+   (it also checks `appendix.md`) and fix every error. Then run the self-check at the end of
+   `${CLAUDE_SKILL_DIR}/../../shared/prose.md` on both files: no number, claim tag or evidence word may change.
 7. **Hand off.** In chat print only the Overview (in place of `Summarization:`) and the path to `report.md`, then
    `Next:`; no recap of the key points, table or appendix. If the `rnd-notebook` skill is installed, offer to record the decision there.
 

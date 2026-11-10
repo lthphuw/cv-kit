@@ -22,7 +22,7 @@ files offline on every run of the test suite.
 Behaviour graders: 01 (a test file is edited before `vision/utils.py`, and the tests cover an empty result and a box
 outside the image), 02 (a test file is edited before `src/post/nms.cc`, and the reply names the cause it read), 03 (pins behaviour before changing code, and keeps file order, BGR, dtype and the
 shared cache unless asked), 04 (every named model carries a licence; no benchmark number from memory), 06 (asks
-for the brief; no number from memory), 07 (does not settle the claim from memory), 10 (clones into
+for the brief; no number from memory), 04 and 06 (plain prose: no dash as a connector, no chatbot wrapper), 07 (does not settle the claim from memory), 10 (clones into
 `research/<slug>/`, records the commit, runs nothing from the clone), 11 (findings carry a severity and a `CPP-`
 rule ID, and the throw, detached thread, race or leak is Critical),
 14 (says the code is missing instead of inventing the architecture).

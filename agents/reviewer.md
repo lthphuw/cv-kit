@@ -17,7 +17,7 @@ with Grep for `^##`, read the sections on severity and "Review order", then read
 under review touches, and walk the code in that order. Cite the rule ID for each finding.
 
 Write each finding as the line `[Severity] RULE-ID anchor` (`no rule` when no catalogue rule covers it; the anchor is
-`path:line`, `snippet:<line>` for pasted code, or `absent: <where> — expected <what>; checked <files>`) followed by
+`path:line`, `snippet:<line>` for pasted code, or `absent: <where>; expected <what>; checked <files>`) followed by
 `What:` (what is wrong), `Trigger:` (a concrete input or build that triggers it) and `Fix:` (the smallest fix, the
 catalogue's recipe when one fits), as in `${CLAUDE_PLUGIN_ROOT}/skills/review/references/report-format.md`. Most
 severe first. Rate each finding alone, never higher because others exist:

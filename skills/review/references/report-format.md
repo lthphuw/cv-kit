@@ -11,8 +11,10 @@ Fix: private constructor + static Create(path) returning the project's result ty
 
 - Severity is the catalogue's Critical, Major or Minor, rated for each finding alone, never raised because others
   exist. Say why only when you changed the catalogue's default.
-- The anchor is `path:line`, or `absent: <where> — expected <what>; checked <files>` for something missing (a test,
+- The anchor is `path:line`, or `absent: <where>; expected <what>; checked <files>` for something missing (a test,
   a status check, a `Close()`).
+- `What`, `Trigger` and `Fix` state facts: no inflation ("a severe issue that could potentially..."), no stacked
+  hedges, no closing line. Prose follows `${CLAUDE_SKILL_DIR}/../../shared/prose.md`.
 - Group the Minor findings a tool repairs into one line per tool, for example `ruff check --fix: I001 x5, UP035 x2`.
 - For each catalogue section with no findings write what you checked there in one line; do not pad.
 - End with `Blocking: <n> Critical, <m> Major` and the tools that did not run. The change is not ready while a

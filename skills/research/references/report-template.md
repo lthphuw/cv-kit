@@ -29,8 +29,12 @@ Details, exclusions and sources: [appendix.md](appendix.md).
 
 Rules:
 - Body outside the table: one screen, at most 400 words. No preamble, no closing remarks, no "this report".
+- Prose follows `${CLAUDE_SKILL_DIR}/../../shared/prose.md`. The lint fails `report.md` on the tells a regex can see
+  (dashes, "not just X but Y", run-ups, chatbot wrappers, inflation, unnamed authority, knowledge-limit filler) and
+  prints them as warnings for `appendix.md`. "Experts argue" becomes a claim tag or goes; "details are not publicly
+  available" becomes a line under Not found or not checked; how the work was done goes to the ledger and search log.
 - **Overview.** The confidence word is `high`, `medium` or `low`, as `claim-checks.md` defines it.
-- **Key points.** At most 7, numbered `N. **Heading**`. Concrete numbers, not adjectives; a quote supports a point and is not repeated beside it; combine near-duplicates. The stress-test answers go here as one point: does the pick still win without its strongest claim, and which single claim, if wrong, would flip it.
+- **Key points.** At most 7, numbered `N. **Heading**`. The heading is a claim ("RF-DETR-L reaches 30 FPS at FP16"), never a topic ("Performance"). Concrete numbers, not adjectives; a quote supports a point and is not repeated beside it; combine near-duplicates. The stress-test answers go here as one point: does the pick still win without its strongest claim, and which single claim, if wrong, would flip it.
 - **Comparison.** `Value` is the claim's value as the source states it; `Claim` holds its tag. Numbers appear only if the dataset, split, resolution and hardware match across rows; otherwise write `not comparable` in `Value`. When two sources give different numbers for one setting (arXiv v1 against v2, a paper against a README), give each its own row.
 - **Next steps.** At most 3 experiments that would confirm or kill the recommendation, each with its metric and data.
 - With fewer than two comparable candidates, say so in the Overview, do not rank, and let Next steps carry the plan.

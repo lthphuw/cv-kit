@@ -23,6 +23,9 @@ short by design, so it also needs an `## Overview` with no bullet lines, at most
 under `## Key points`, and at most 400 words outside the table. A report with the old
 `## 3.` comparison heading keeps the table and tag checks only. If an `appendix.md` sits next to
 the report, its claim tags get the same check (the appendix has no table or length rules).
+Every report line outside tables and code is also checked for the AI-writing tells in
+shared/prose.md that a regex can see (dashes, "not just X but Y", run-ups, chatbot wrappers,
+inflation, unnamed authority); in the appendix these are printed as warnings and do not fail.
 """
 from __future__ import annotations
 
@@ -64,6 +67,30 @@ MAX_KEY_POINTS = 7
 MAX_WORDS = 400
 MAX_FOUND = 800
 SKIPPED_TAGS = {"script", "style", "annotation", "annotation-xml"}
+# The AI-writing tells of shared/prose.md that a regex can see, as (tell, pattern, what to do instead).
+# Kept narrow on purpose: "robust", "key" and "highlight" are CV terms, so they are not here.
+PROSE_TELLS = tuple((tell, re.compile(pattern, re.IGNORECASE), fix) for tell, pattern, fix in (
+    ("dash", r"—|(?<!\d)–|–(?!\d)|\s--\s", "use a period, comma, colon or parentheses"),
+    ("not X but Y", r"\bnot (?:just|only|merely)\b.*\bbut\b|\bkhông (?:chỉ|những)\b.*\bmà còn\b",
+     "state the point directly"),
+    ("run-up", r"\blet[’']s (?:dive|explore|break|take a look)\b|\bhere[’']s (?:the thing|what you need)\b"
+     r"|\bwithout further ado\b|\bhãy cùng\b", "start with the point"),
+    ("chatbot", r"\bi hope this helps\b|\blet me know\b|\bgreat question\b|\bwould you like\b|\bwant me to\b"
+     r"|\bhy vọng (?:điều|thông tin) này\b", "cut the wrapper"),
+    ("about the document", r"\bthis (?:report|document|section)\b|\bbáo cáo này\b", "write about the subject"),
+    ("inflation", r"\bgame[- ]changer\b|\bgroundbreaking\b|\brevolutionary\b|\bcutting[- ]edge\b"
+     r"|\bparadigm shift\b", "give the number instead"),
+    ("AI word", r"\b(?:delve[sd]?|delving|tapestry|testament|pivotal|showcas(?:e|es|ed|ing)"
+     r"|underscor(?:e|es|ed|ing)|seamless(?:ly)?|meticulous(?:ly)?|intricate|vibrant|crucial)\b",
+     "use the plain word"),
+    ("unnamed authority", r"\b(?:experts?|researchers|observers|critics) (?:argue|say|believe|agree|note)\b"
+     r"|\bwidely (?:regarded|considered|recogni[sz]ed)\b", "cite the claim tag or cut it"),
+    ("knowledge limit", r"\bnot publicly available\b|\bnot widely documented\b|\bas of my\b"
+     r"|\bmy (?:knowledge|training)\b|\bbased on (?:the )?available information\b",
+     "say what the source does not show, under Not found in appendix.md"),
+))
+INLINE_CODE_RE = re.compile(r"`[^`]*`")
+LINK_TARGET_RE = re.compile(r"\]\([^)]*\)")
 
 
 def _is_blank(value: object) -> bool:
@@ -280,11 +307,27 @@ def _lint_shape(lines: list[str], name: str) -> list[str]:
     return errors
 
 
+def lint_prose(text: str, name: str, label: str = "prose") -> list[str]:
+    """Return one string per line and tell of shared/prose.md, outside tables, code blocks and inline code."""
+    found: list[str] = []
+    fenced = False
+    for number, line in enumerate(text.splitlines(), 1):
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+            continue
+        if fenced or line.lstrip().startswith("|"):
+            continue
+        prose = LINK_TARGET_RE.sub("]", INLINE_CODE_RE.sub("", line))
+        found += [f"{name}:{number}: {label}: {tell}: {fix}" for tell, pattern, fix in PROSE_TELLS
+                  if pattern.search(prose)]
+    return found
+
+
 def lint_report(text: str, claims: list[dict], name: str = "report") -> list[str]:
     """Return one error string per report line that the claims do not back, and per rule it breaks."""
     by_id = {str(c.get("id")): c for c in claims}
     lines = text.splitlines()
-    errors = lint_tags(text, claims, name)
+    errors = lint_tags(text, claims, name) + lint_prose(text, name)
     legacy = not any(re.match(r"##\s*comparison\b", line, re.IGNORECASE) for line in lines)
     if not legacy:
         errors += _lint_shape(lines, name)
@@ -375,6 +418,8 @@ def main(argv: list[str] | None = None) -> int:
         errors += lint_report(text, claims, args.report.name)
     if appendix_text is not None:
         errors += lint_tags(appendix_text, claims, "appendix.md")
+        for warning in lint_prose(appendix_text, "appendix.md", "prose (warning)"):
+            print(warning, file=sys.stderr)
     for error in errors:
         print(error, file=sys.stderr)
     saved = sum(1 for claim in claims if not _is_blank(claim.get("source_file")))

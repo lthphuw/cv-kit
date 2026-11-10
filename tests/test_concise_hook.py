@@ -42,6 +42,13 @@ def test_concision_never_cuts_safety_or_the_test_rule():
         assert keyword in lowered, keyword
 
 
+def test_prose_rules_reach_every_reply_and_subagent():
+    # The tells of shared/prose.md a model makes most, in any language, plus decision-first replies.
+    for needle in ("in any language", "not X but Y", "run-up", "I hope this helps", "em or en dashes",
+                   "sentence-case", "decision first"):
+        assert needle in RULES, needle
+
+
 def test_hooks_json_registers_both_events():
     hooks = json.loads((ROOT / "hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
     session = hooks["SessionStart"][0]

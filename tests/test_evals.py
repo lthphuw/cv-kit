@@ -38,6 +38,13 @@ DECOYS = ("deep-research", "superpowers:brainstorming", "superpowers:requesting-
           "figma:figure", "other:review", "develop-v2", "research-notes", "reviewer", "setup-env", "recommit")
 # Strings each regex grader must and must not find in a final reply.
 REGEX_SAMPLES = {
+    "plain-prose": (
+        ["RF-DETR is the pick — the latency is open.", "YOLO11 – AGPL-3.0, so it is out.", "I hope this helps!",
+         "Great question! First the brief.", "Let's dive into the candidates.", "Here's the thing: no latency.",
+         "Want me to search arXiv now?"],
+        ["| YOLO11 | — | AGPL-3.0 |", "Papers from 2024–2025 only.", "Which dataset and split? I assumed COCO val2017.",
+         "Next:\n- /cv-kit:research small objects on VisDrone", "Let me check the model card first."],
+    ),
     "tests-written": (
         ['{"type":"tool_use","name":"Edit","input":{"file_path":"/w/tests/test_utils.py","old_string":"a"}}',
          '{"type":"tool_use","name":"Edit","input":{"replace_all":false,"file_path":"/w/tests/test_utils.py"}}',
