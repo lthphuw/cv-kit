@@ -13,7 +13,8 @@ model id). Each agent's frontmatter holds its default (`engineer` and `reviewer`
 | Lookup | Read-only: where is X, who calls Y, what does this log say | `explorer`, `haiku`, low |
 | Mechanical | No behaviour change, or a test for behaviour already pinned | `engineer`, `sonnet`, medium |
 | Routine (the default) | The spec is known or the bug reproduces in a test; box maths, NMS, a loader, a located bug, a perf fix with a benchmark | `engineer`, `sonnet`, high |
-| Hard | A concurrency or memory-safety bug; a cause still unknown after `explorer` and a reproduction attempt; a design across modules; a public API or ABI | `engineer`, `opus`, high |
+| Design | Two or more packages that share an interface or a data flow | `architect`, `opus`, high (`xhigh`: a public API or ABI, a threading model, a design sent back) |
+| Hard | A concurrency or memory-safety bug; a cause still unknown after `explorer` and a reproduction attempt | `engineer`, `opus`, high |
 | Stuck | An `opus` high attempt failed on the reasoning | `engineer`, `opus`, xhigh, once; then report |
 
 A concurrency or memory-safety bug is Hard from the request alone; decide it before reading code. Size
@@ -22,8 +23,19 @@ Routine. A topic alone (numerics, performance, CV) does not make a task Hard; an
 are failed briefs, so the first answer to a failure is a better brief, not a bigger model.
 
 Review follows the same split: `reviewer` on `sonnet`, high, by default; on `opus`, high, when the change touches
-concurrency, memory safety, security or a number that will be published. A one-line change gets no reviewer; its
-test output is the check.
+concurrency, memory safety, security or a number that will be published, implements an `architect` design, or was
+written by an `opus` engineer. A one-line change gets no reviewer; its test output is the check. The reviewer has no
+shell, so it is given the pasted diff, not a diff range.
+
+## Design before code
+
+A design is worth an agent only when its mistakes would be copied into several briefs. `architect` is given the
+approved brief, `explorer`'s facts, the test command and the baseline; it reads the code and
+returns `Options`, `Flow`, `Interfaces`, `Invariants`, `Packages`, `Risks` and `Decisions`; it cannot edit. The user
+approves the design before any engineer starts. Each package is already a brief (`Goal`, `Done when`, `Files`,
+`Constraints`, `Depends on`): add `Facts`, `Ruled out` and `Mode`, and route it as Routine unless it is itself a
+Hard row. The reviewer of a designed change gets `Interfaces` and `Invariants` as the spec, never the reasoning.
+A single package, or packages that share nothing, get no architect: the brief is the design.
 
 ## A good brief
 
@@ -62,7 +74,7 @@ fix from the diagnosis.
 | Blocked, `Need:` a fact or file | Get it (explorer or you), SendMessage the same agent |
 | Blocked, `Need:` a decision that changes scope | Ask the user |
 | Failed, brief problem (wrong file, missing fact, bad command, environment) | Fix the brief, same model |
-| Failed, reasoning (fix did not hold, evidence contradicts) | One level up, the attempt under `Ruled out` |
+| Failed, reasoning (fix did not hold, evidence contradicts) | The `opus` engineer row, the attempt under `Ruled out` |
 
 Continuing an agent with SendMessage keeps what it has read and costs far less than a fresh call. Without it, start
 a new call with the earlier report pasted into `Facts`. At most three engineer attempts per package.
@@ -74,8 +86,8 @@ a new call with the earlier report pasted into `Facts`. At most three engineer a
 - Independent means: no shared files and no output used as another's input. Only those run in parallel, at most
   three engineers at a time, each with `isolation: worktree`.
 - The reviewer never sees the author's reasoning or findings first; it gets the diff, the test output and the rules.
-- Read-only work (`explorer`, `reviewer`) cannot edit; only `engineer` writes code, and it follows the red, green,
-  refactor loop in the tests references.
+- Read-only work (`explorer`, `architect`, `reviewer`) cannot edit; only `engineer` writes code, and it follows the
+  red, green, refactor loop in the tests references.
 - Do not use `max` effort; the docs warn it overthinks.
 - To see which model ran, open the subagent in `/tasks`, or press Ctrl+O to show the model on each message.
 - A returned result is a claim. Rerun the test or command it names before you rely on it.

@@ -9,7 +9,7 @@ A Claude Code plugin for computer-vision engineers who write Python, edge C++ an
 │  prompt  │───►│      skill      │───►│        agents        │───►│         result          │
 │  plain   │    │ develop  review │    │ explorer   engineer  │    │ green tests + output    │
 │  words   │    │ research figure │    │ researcher reviewer  │    │ report, claims checked  │
-│          │    │ commit   setup  │    │ claim-verifier       │    │ findings · figure       │
+│          │    │ commit   setup  │    │ architect  verifier  │    │ findings · figure       │
 └──────────┘    └─────────────────┘    └──────────────────────┘    └────────────┬────────────┘
      ▲                                                                          │
      └──────────────────────────── Next: prompts to paste ◄─────────────────────┘
@@ -51,11 +51,11 @@ You never pick an agent: the skill does, sizing model and effort to the task.
 | Kind | Name | Model · effort | Job |
 |:-----|:-----|:---------------|:----|
 | Agent | `explorer` | haiku `▰▱▱▱▱` | find and summarise code, logs, docs · read-only |
+| Agent | `architect` | opus `▰▰▰▱▱` · public API, threading: `▰▰▰▰▱` | options, flow, interfaces, packages · read-only, only for packages that depend on each other |
 | Agent | `engineer` | sonnet `▰▰▰▱▱` · mechanical: `▰▰▱▱▱` · hard: opus `▰▰▰▱▱` | one change, test first, from a full brief |
 | Agent | `researcher` | sonnet `▰▰▰▱▱` | sourced evidence for one candidate model |
-| Agent | `claim-verifier` | haiku `▰▰▱▱▱` | re-reads each source, blind to the claimed value |
-| Agent | `reviewer` | sonnet `▰▰▰▱▱` · risky: opus `▰▰▰▱▱` | read-only review |
-| Agent | `lead` | opus `▰▰▰▱▱` | main thread, only delegates |
+| Agent | `claim-verifier` | haiku `▰▰▱▱▱` | re-reads one candidate's sources, blind to the claimed value |
+| Agent | `reviewer` | sonnet `▰▰▰▱▱` · risky or designed: opus `▰▰▰▱▱` | read-only review |
 
 Effort: `▰▱▱▱▱` low · `▰▰▱▱▱` medium · `▰▰▰▱▱` high · `▰▰▰▰▱` xhigh · `▰▰▰▰▰` max
 
@@ -67,7 +67,7 @@ Effort: `▰▱▱▱▱` low · `▰▰▱▱▱` medium · `▰▰▰▱▱` h
           ▼                              ▼                              ▼
          read                     known spec · bug a                   hard
    find · summarise              test can reproduce            threads · memory safety
-          │                    (box maths, NMS, perf)        cause unknown · cross-module
+          │                    (box maths, NMS, perf)               cause unknown
           ▼                              ▼                              ▼
    explorer  haiku                engineer  sonnet                engineer  opus
       ▰▱▱▱▱ low                     ▰▰▰▱▱ high                      ▰▰▰▱▱ high
@@ -75,27 +75,15 @@ Effort: `▰▱▱▱▱` low · `▰▰▱▱▱` medium · `▰▰▰▱▱` h
                                   reviewer  sonnet                reviewer  opus
                                     ▰▰▰▱▱ high                      ▰▰▰▱▱ high
 
+two or more packages that share an interface or a data flow?
+  ──► architect  opus ▰▰▰▱▱ high ──► your yes ──► its packages go to engineer  sonnet ▰▰▰▱▱
+
 brief = Goal · Done when · Facts · Files · Constraints · Ruled out · Mode (fix | diagnose)
 
 came back blocked?  ──► answer it, SendMessage the same agent
 failed on the brief? ──► fix the brief, same model
-failed on reasoning? ──► one level up: sonnet ▰▰▰▱▱ ──► opus ▰▰▰▱▱ ──► opus ▰▰▰▰▱ once ──► report
+failed on reasoning? ──► escalate:     sonnet ▰▰▰▱▱ ──► opus ▰▰▰▱▱ ──► opus ▰▰▰▰▱ once ──► report
                          at most 3 attempts, never the same brief twice
-```
-
-### Lead mode: `claude --agent cv-kit:lead`
-
-```
-                            lead · opus ▰▰▰▱▱
-                   loads the skill, never edits a file
-      ┌──────────────┬──────────────┼───────────────┬───────────────┐
-      ▼              ▼              ▼               ▼               ▼
-   explorer       engineer      researcher    claim-verifier     reviewer
-    reads          edits         evidence       re-checks        reviews
-      │              │              │               │               │
-      └──────────────┴──────────────┼───────────────┴───────────────┘
-                                    ▼
-       each result is a claim: lead reruns the named command first
 ```
 
 ## Flows
@@ -105,18 +93,21 @@ failed on reasoning? ──► one level up: sonnet ▰▰▰▱▱ ──► op
 ```
 /cv-kit:develop add iou(a, b) and clamp(box, w, h) to vision/
   │
-  ├─ 1 SIZE ──── one-liner? ─┬─ yes ─► do it inline, then 4
+  ├─ 1 SIZE ──── one-liner? ─┬─ yes ─► do it inline, then 5
   │                          └─ no ──► one question at a time ─► brief ─► your yes
   │
   ├─ 2 LOOK ──── project rules · test setup · baseline test run          explorer
   │
-  ├─ 3 BUILD ─── ┌─────┐    ┌───────┐    ┌──────────┐                    engineer × N
+  ├─ 3 DESIGN ── packages that share an interface: options · flow ·          architect
+  │              interfaces · packages ─► your yes
+  │
+  ├─ 4 BUILD ─── ┌─────┐    ┌───────┐    ┌──────────┐                    engineer × N
   │              │ red │───►│ green │───►│ refactor │                    in parallel,
   │              └─────┘    └───────┘    └──────────┘                    one per file set
   │
-  ├─ 4 VERIFY ── tests + linters ─► review by risk                       reviewer
+  ├─ 5 VERIFY ── tests + linters ─► review by risk                       reviewer
   │
-  └─ 5 REPORT ── cause at path:line · tests by name · literal command output
+  └─ 6 REPORT ── cause at path:line · tests by name · literal command output
 ```
 
 ### `/cv-kit:research`
@@ -130,7 +121,7 @@ failed on reasoning? ──► one level up: sonnet ▰▰▰▱▱ ──► op
   │                   ─► your yes (≤ 6 go on)
   ├─ 4 DEEP-READ ──── researcher   researcher   researcher               one per candidate,
   │                    model A      model B      model C                 in parallel
-  ├─ 5 CROSS-CHECK ── claim-verifier re-reads every source without seeing the claimed value
+  ├─ 5 CROSS-CHECK ── claim-verifier per candidate re-reads its sources without seeing the claimed value
   └─ 6 REPORT ─────── research/<slug>/report.md     overview · ≤ 7 points · table · ≤ 3 next steps
                       research/<slug>/appendix.md   exclusions · caveats · claims ledger · sources
 
@@ -144,7 +135,7 @@ one claim to check? ─► steps 4–5 only ─► confirmed | partly right | co
   │
   ├─ 1 SCOPE ──── paths · uncommitted diff · branch vs base · pull request
   ├─ 2 TOOLS ──── ruff · mypy · clang-format · clang-tidy · build · tests   (only those installed)
-  ├─ 3 REVIEW ─── reviewer sonnet ▰▰▰▱▱   opus for concurrency, memory safety, security, published numbers
+  ├─ 3 REVIEW ─── reviewer sonnet ▰▰▰▱▱   opus: concurrency, memory safety, security, published numbers, designed changes
   │               large diff ─► one reviewer per directory, in parallel
   ├─ 4 REPORT ─── [Critical] CPP-ERR-8 src/infer/engine.cc:88 ─► What · Trigger · Fix
   │               Blocking: 1 Critical, 0 Major
@@ -266,7 +257,7 @@ Lint configs tested with ruff 0.17.2, mypy 2.4.0, clang-format and clang-tidy 23
 - Progress, Summarization, Next: model-written, one can be skipped.
 - Catalogue rows marked `UNVERIFIED` are unchecked; licences change.
 - No training, benchmark harness or hardware measurement: you run those.
-- Cost: `lead` runs on Opus; `engineer` and `reviewer` use Opus only for the Hard rows; the eval suite calls the API (run by hand).
+- Cost: `architect` runs on Opus, only for multi-package work; `engineer` and `reviewer` use Opus only for the Hard rows; the eval suite calls the API (run by hand).
 
 ## Development
 

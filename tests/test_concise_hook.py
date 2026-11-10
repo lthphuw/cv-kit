@@ -83,7 +83,7 @@ class TestProgressAndNextPrompts:
         assert "heartbeat" not in PROGRESS.lower() and "every minute" not in PROGRESS.lower()
 
     @pytest.mark.parametrize("path", ["agents/engineer.md", "agents/explorer.md", "agents/researcher.md",
-                                      "agents/claim-verifier.md", "agents/reviewer.md", "agents/lead.md",
+                                      "agents/claim-verifier.md", "agents/reviewer.md", "agents/architect.md",
                                       "skills/develop/SKILL.md", "skills/develop/references/routing.md"])
     def test_the_hook_owns_the_rules_once(self, path):
         text = (ROOT / path).read_text(encoding="utf-8")

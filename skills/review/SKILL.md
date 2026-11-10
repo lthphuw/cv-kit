@@ -1,6 +1,6 @@
 ---
 name: review
-description: Use when asked to review code, a diff, a branch, a pull request, a CV pipeline or an evaluation report (Python or C++, against the strict style catalogues, correctness, leakage and reproducibility), or to re-check the fixes from an earlier review. Not for making the fixes; that is develop.
+description: Use when asked to review code, a diff, a branch, a pull request, a CV pipeline or an evaluation report (Python, C++ or Go, against the strict style catalogues, correctness, leakage and reproducibility), or to re-check the fixes from an earlier review. Not for making the fixes; that is develop.
 argument-hint: "[files, diff, branch or PR number]"
 allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project_facts.py *)
 ---
@@ -20,11 +20,14 @@ Facts read just now (a fact marked not found is not a finding):
    goes in a separate "Outside the change" list and does not count toward the verdict.
 2. **Run the tools that exist.** Only ones already installed, never an install without asking. Python: `ruff check`,
    `ruff format --check`, `mypy`. C++: `clang-format --dry-run --Werror`, `clang-tidy` (needs
-   `compile_commands.json`), the project's build with its warning flags, and the tests. Record each command and its
+   `compile_commands.json`), the project's build with its warning flags, and the tests. Go: `gofmt -l`, `go vet`
+   and `go test`. Record each command and its
    result; if a tool did not run, say so. Missing or unconfigured tools: offer `/cv-kit:setup`.
 3. **Dispatch the `reviewer` agent** (`model` `sonnet`, `effort` `high`; `model` `opus` when the change touches
-   concurrency, memory safety, security or a number the user will publish) with the file list or diff range and the
-   tool output, never your own findings. For a large change, split by directory and run the reviewers in one message.
+   concurrency, memory safety, security or a number the user will publish, implements an `architect` design, or was
+   written by an `opus` engineer). It has no shell, so paste the diff, or give the files with their changed line
+   ranges, with the tool output and, for a designed change, the design's `Interfaces` and `Invariants`; never your
+   own findings. For a large change, split by directory and run the reviewers in one message.
 4. **Report** in the format of `${CLAUDE_SKILL_DIR}/references/report-format.md`, copied, not retold in prose. Each
    finding opens with the line `[Severity] RULE-ID path:line` and is followed by What, Trigger and Fix lines; a defect
    no catalogue rule covers opens `[Severity] no rule` and names the norm it rests on. Most severe first, then the

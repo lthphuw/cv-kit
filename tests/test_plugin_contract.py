@@ -56,8 +56,26 @@ class TestRouting:
     def test_opus_is_the_exception_in_the_table(self):
         rows = routing_rows()
         opus = [r for r in rows if r[1] == "opus"]
-        assert len(rows) >= 5 and len(opus) <= 2
+        assert len(rows) >= 6 and len(opus) <= 3
         assert ("engineer", "sonnet", "high") in rows and ("reviewer", "sonnet", "high") in rows
+
+    def test_a_design_goes_to_the_architect_not_to_an_opus_engineer(self):
+        """One agent designs and returns the packages; the engineers that build them stay on Sonnet."""
+        text = (ROOT / "skills/develop/SKILL.md").read_text(encoding="utf-8")
+        table = text.split("## Route the work", 1)[1]
+        assert ("architect", "opus", "high") in routing_rows()
+        hard = next(line for line in table.splitlines() if "`engineer` | `opus`" in line)
+        assert "design" not in hard.lower() and "public API" not in hard
+        design = next(p for p in text.split("\n\n") if p.startswith("**Design before code.**"))
+        assert "wait for the user's yes" in design and "`xhigh`" in design
+        assert "share an interface or a data flow" in design and "share nothing" in design
+        scoping = (ROOT / "skills/develop/references/scoping.md").read_text(encoding="utf-8")
+        assert "`architect`" in scoping
+
+    def test_a_designed_or_opus_written_change_is_reviewed_on_opus(self):
+        row = next(r for r in (ROOT / "skills/develop/SKILL.md").read_text(encoding="utf-8").splitlines()
+                   if "`reviewer` | `opus`" in r)
+        assert "`architect`" in row and "`opus` engineer" in row
 
     def test_the_brief_has_every_field(self):
         text = (ROOT / "skills/develop/SKILL.md").read_text(encoding="utf-8")
@@ -84,6 +102,12 @@ class TestRouting:
         text = (ROOT / "skills/review/SKILL.md").read_text(encoding="utf-8")
         assert "`model` `sonnet`, `effort` `high`" in text
 
+    def test_the_reviewer_is_handed_the_diff_because_it_has_no_shell(self):
+        assert "Bash" not in front(ROOT / "agents/reviewer.md")["tools"]
+        assert "no shell" in (ROOT / "agents/reviewer.md").read_text(encoding="utf-8")
+        review = (ROOT / "skills/review/SKILL.md").read_text(encoding="utf-8")
+        assert "paste the diff" in review and "`go vet`" in review
+
 
 class TestHooks:
     def handlers(self, event: str):
@@ -108,19 +132,36 @@ class TestHooks:
 
 
 class TestAgents:
-    @pytest.mark.parametrize("agent", ["explorer", "claim-verifier", "researcher"])
+    def test_the_roster_has_no_agent_whose_job_a_skill_already_does(self):
+        """`lead` repeated the routing in `develop`; the main thread routes from the skill instead."""
+        assert AGENTS == ["architect", "claim-verifier", "engineer", "explorer", "researcher", "reviewer"]
+
+    @pytest.mark.parametrize("agent", ["explorer", "claim-verifier", "researcher", "architect"])
     def test_runaway_guard(self, agent):
         assert isinstance(front(ROOT / f"agents/{agent}.md").get("maxTurns"), int)
 
     def test_the_blind_verifier_starts_without_project_instructions(self):
         assert front(ROOT / "agents/claim-verifier.md").get("omitClaudeMd") is True
 
-    def test_lead_may_only_spawn_cv_kit_agents(self):
-        tools = front(ROOT / "agents/lead.md")["tools"]
-        spawn = re.search(r"Agent\(([^)]*)\)", tools).group(1)
-        assert {a.strip() for a in spawn.split(",")} == {"explorer", "engineer", "researcher", "claim-verifier",
-                                                         "reviewer"}
-        assert "Edit" not in tools and "Write" not in tools, "the lead delegates edits to the engineer"
+    def test_the_architect_designs_and_cannot_edit(self):
+        fm = front(ROOT / "agents/architect.md")
+        assert fm["tools"] == "Read, Grep, Glob" and (fm["model"], fm["effort"]) == ("opus", "high")
+        text = (ROOT / "agents/architect.md").read_text(encoding="utf-8")
+        for section in ("`Options`", "`Flow`", "`Interfaces`", "`Invariants`", "`Packages`", "`Risks`", "`Decisions`"):
+            assert section in text, section
+        for field in ("`Goal`", "`Done when`", "`Files`", "`Constraints`", "`Depends on`"):
+            assert field in text, field
+
+    def test_one_verifier_per_candidate(self):
+        """One verifier for six candidates ran out of turns; each checks its own candidate's claims."""
+        assert "one per candidate" in front(ROOT / "agents/claim-verifier.md")["description"].lower()
+        text = (ROOT / "skills/research/SKILL.md").read_text(encoding="utf-8")
+        assert "--candidate" in (ROOT / "agents/claim-verifier.md").read_text(encoding="utf-8")
+        assert "checks-<candidate>.json" in text and "--checks checks-*.json" in text
+
+    @pytest.mark.parametrize("path", ["agents/reviewer.md", "skills/develop/SKILL.md", "skills/review/SKILL.md"])
+    def test_descriptions_name_go(self, path):
+        assert "Go" in front(ROOT / path)["description"], path
 
 
 class TestSkills:

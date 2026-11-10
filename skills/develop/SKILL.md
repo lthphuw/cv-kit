@@ -1,6 +1,6 @@
 ---
 name: develop
-description: Use when writing, fixing, refactoring, testing or scoping code in Python or C++ (computer vision or not), or finding where code reads or uses something before a change, before touching any code, or writing the /goal or /loop line for unattended work. Applies test-first, systematic debugging, simplicity and evidence, and sends the work to agents with a model and effort sized to the task.
+description: Use when writing, fixing, refactoring, testing or scoping code in Python, C++ or Go (computer vision or not), or finding where code reads or uses something before a change, before touching any code, or writing the /goal or /loop line for unattended work. Applies test-first, systematic debugging, simplicity and evidence, and sends the work to agents with a model and effort sized to the task.
 argument-hint: "[feature, bug or goal]"
 allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project_facts.py *) Bash(python3 ${CLAUDE_PLUGIN_ROOT}/hooks/evidence_gate.py *)
 ---
@@ -27,9 +27,10 @@ Treat a fact above as true only for what it says; "not found" means look yoursel
 
 1. **Size it.** A clear one-line change, where the user names the line and the change: do it. A bug whose cause is unknown is never a one-line change, however small the files. New or vague: read `${CLAUDE_SKILL_DIR}/references/scoping.md`, ask one question at a time, write the brief back, and wait for a yes before code.
 2. **Look first.** Read the project's rules and test setup, then run the existing tests for a baseline.
-3. **Red, green, refactor**: by you for a one-line change, otherwise by the `engineer` you brief. Read the test reference that applies before the first test: `${CLAUDE_SKILL_DIR}/references/python-testing.md` (pytest), `cpp-testing.md` (GoogleTest) or `go-testing.md` (`go test`). Refactors follow `refactor.md`. `/simplify` is an optional last pass once the tests are green.
-4. **Verify.** Run the tests and linters. Then review by the risk rules in "Route the work"; a one-line change needs no reviewer, because its test output is the check. Give the reviewer the diff and the tool output, not your conclusions. End with the report: for a bug, the cause in one sentence with `path:line`; the tests added, by name, and what each pins; the change; and the literal output of each command, or that it did not run and why.
-5. **Commit** only when asked, through `/cv-kit:commit`.
+3. **Design, only when packages depend on each other.** Two or more packages that share an interface or a data flow: `architect` designs it and you wait for the user's yes, as "Route the work" says. One package, or packages that share nothing: skip this, the brief is the design.
+4. **Red, green, refactor**: by you for a one-line change, otherwise by the `engineer` you brief. Read the test reference that applies before the first test: `${CLAUDE_SKILL_DIR}/references/python-testing.md` (pytest), `cpp-testing.md` (GoogleTest) or `go-testing.md` (`go test`). Refactors follow `refactor.md`. `/simplify` is an optional last pass once the tests are green.
+5. **Verify.** Run the tests and linters. Then review by the risk rules in "Route the work"; a one-line change needs no reviewer, because its test output is the check. The reviewer has no shell: paste the diff and the tool output, and the design's `Interfaces` and `Invariants` when there was one, not your conclusions. End with the report: for a bug, the cause in one sentence with `path:line`; the tests added, by name, and what each pins; the change; and the literal output of each command, or that it did not run and why.
+6. **Commit** only when asked, through `/cv-kit:commit`.
 
 Need sourced evidence about a model, paper or benchmark: `/cv-kit:research`. Need linters or rules installed in the project: `/cv-kit:setup`.
 
@@ -44,9 +45,12 @@ Route yourself; do not ask the user. Anything beyond a clear one-line change goe
 | Find, read or summarise code, logs, docs | `explorer` | `haiku` | low |
 | Mechanical: rename, move, a config value, a test for behaviour already pinned | `engineer` | `sonnet` | medium |
 | Feature, bug fix, test or refactor step with a known spec or a bug a test can reproduce | `engineer` | `sonnet` | high |
-| Hard: a concurrency or memory-safety bug, a cause still unknown after `explorer` and a reproduction attempt, a design across modules or a public API | `engineer` | `opus` | high |
+| Design before code: two or more packages that share an interface or a data flow | `architect` | `opus` | high |
+| Hard: a concurrency or memory-safety bug, or a cause still unknown after `explorer` and a reproduction attempt | `engineer` | `opus` | high |
 | Review of a change whose tests and linters pass | `reviewer` | `sonnet` | high |
-| Review touching concurrency, memory safety, security or a number that will be published | `reviewer` | `opus` | high |
+| Review touching concurrency, memory safety, security or a number that will be published, or of a change that implements an `architect` design or that an `opus` engineer wrote | `reviewer` | `opus` | high |
+
+**Design before code.** When the work splits into two or more packages that share an interface or a data flow, send `architect` the approved brief, `explorer`'s `path:line` facts, the test command and the baseline result before any engineer. It is read-only and returns the options, the flow, the interfaces, the invariants and the packages as engineer briefs. Show the design and wait for the user's yes; then add `Facts`, `Ruled out` and `Mode` to each package and dispatch it. Designed packages are `sonnet`, high, unless one is itself a Hard row. Use `effort` `xhigh` for a public API or ABI, a threading model, or a design the user sent back. Never send `architect` a single package, or packages that share nothing: the brief is the design.
 
 **The brief.** Every `engineer` call carries these fields. A field you cannot fill is a question for `explorer` or the user, never for the engineer to guess.
 
@@ -67,7 +71,7 @@ One package is one behaviour and its tests, a few files at most; split anything 
 - Done, but a file outside `Files` changed or the red run is missing: ask the same agent with SendMessage, not a new one.
 - Blocked on a fact, a file outside `Files` or a decision: answer it and continue the same agent with SendMessage (without it, a new call with the earlier report pasted in). A decision that changes the scope goes to the user.
 - Failed because of the brief (a wrong file, a missing fact, a bad test command, the environment): fix the brief and rerun on the same model.
-- Failed on the reasoning (the fix did not hold, the evidence contradicts the hypothesis): one row up, with the failed attempt under `Ruled out`. An `opus` high failure gets one `opus` `xhigh` run; then stop and report the evidence.
+- Failed on the reasoning (the fix did not hold, the evidence contradicts the hypothesis): the `opus` engineer row, with the failed attempt under `Ruled out`. An `opus` high failure gets one `opus` `xhigh` run; then stop and report the evidence.
 
 Never resend the same brief, and run at most three engineer attempts per package. Run file-disjoint packages in one message, at most three engineers at a time, each with `isolation: worktree`.
 
