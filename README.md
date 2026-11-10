@@ -7,7 +7,29 @@ A Claude Code plugin for computer-vision engineers who write Python, edge C++ an
 code, sourced model research, a strict review or a clean commit, with each step handed to the cheapest agent that
 can do it.
 
-![The develop and research flows: the main thread scopes the work, read-only agents explore, design, research and review, and one agent edits code test first](docs/assets/overview.png)
+![The develop and research flows: the main thread scopes the work, read-only agents explore, design, research and review, one agent edits code test first, and notes say when each is used](docs/assets/overview.png)
+
+<sub>Drawn with cv-kit's own `/cv-kit:figure` skill from [`docs/figures/cv-kit-overview.figure.js`](docs/figures/cv-kit-overview.figure.js).</sub>
+
+## What you see
+
+![Live agent rows during a develop run: explorer, architect, two engineers in parallel, then the reviewer](docs/assets/live-rows.gif)
+
+<sub>Rendered from the output of `hooks/agent_status.py` for a scripted run, not a screen recording.</sub>
+
+One live row per agent: `icon agent (model effort) task tokens elapsed`, with `◐` running, `○` stalled, `✓` done,
+`✗` failed, `■` killed. When an agent finishes you get a `Progress` line per agent; a finished task ends with
+`Summarization` (results with their evidence) and `Next` (prompts to paste):
+
+```
+● Summarization:
+  - iou in vision/utils.py, tests in tests/test_iou.py
+  - pytest -q: 9 passed
+  - Nothing is committed.
+  Next:
+  - /cv-kit:review the diff against main
+  - /cv-kit:commit
+```
 
 ## Install
 
@@ -35,29 +57,6 @@ Name a skill, or describe the work: "NMS crashes on empty input" loads `develop`
 | Skill | `figure` | `low-level figure with tensor shapes for the neck and head` | hand-drawn HTML + PNG (SVG for papers), like the one above |
 | Skill | `commit` | `/cv-kit:commit` | preview → your yes → git or SVN commit without AI trailers |
 | Skill | `setup` | `/cv-kit:setup cpp` | `.claude/rules/` + lint configs, existing files kept |
-
-## Agents
-
-You never pick an agent: the skill does, and sizes the model and effort to the task.
-
-| Kind | Name | Model · effort | Job |
-|:-----|:-----|:---------------|:----|
-| Agent | `explorer` | haiku `▰▱▱▱▱` | find and summarise code, logs, docs · read-only |
-| Agent | `architect` | opus `▰▰▰▱▱` · public API, threading: `▰▰▰▰▱` | options, flow, interfaces, work packages · read-only |
-| Agent | `engineer` | sonnet `▰▰▰▱▱` · mechanical: `▰▰▱▱▱` · hard: opus `▰▰▰▱▱` | one change, test first, from a full brief |
-| Agent | `reviewer` | sonnet `▰▰▰▱▱` · risky or designed: opus `▰▰▰▱▱` | findings with rule IDs · read-only |
-| Agent | `researcher` | sonnet `▰▰▰▱▱` | sourced evidence for one candidate model |
-| Agent | `claim-verifier` | haiku `▰▰▱▱▱` | re-reads one candidate's sources, blind to the claimed value |
-
-Effort: `▰▱▱▱▱` low · `▰▰▱▱▱` medium · `▰▰▰▱▱` high · `▰▰▰▰▱` xhigh
-
-- **Sonnet by default.** Opus only for a concurrency or memory-safety bug, a cause still unknown after a
-  reproduction attempt, a design, and the review of those.
-- **Design first, only when it pays.** Work that splits into packages sharing an interface or a data flow goes to
-  `architect`; you approve the design before any engineer starts.
-- **A brief, not a chat.** Every engineer gets `Goal · Done when · Facts · Files · Constraints · Ruled out · Mode`.
-- **Re-brief before escalating.** Failed on the brief: fix it, same model. Failed on the reasoning: sonnet → opus →
-  opus `▰▰▰▰▱` once, then a report. At most three attempts.
 
 ## Flows
 
@@ -120,14 +119,28 @@ commit   branch + files + message ─► STOP ─► your yes ─► git / svn c
                                       block_trailers.py ──────┘  refuses AI trailers
 ```
 
-## What you see
+## Agents
 
-![Live agent rows during a develop run: explorer, architect, two engineers in parallel, then the reviewer](docs/assets/live-rows.gif)
+You never pick an agent: the skill does, and sizes the model and effort to the task.
 
-One live row per agent, rendered here from `hooks/agent_status.py` output: `icon agent (model effort) task tokens
-elapsed`, with `◐` running, `○` stalled, `✓` done, `✗` failed, `■` killed. When an agent finishes you get a
-`Progress` line per agent; a finished task ends with `Summarization` (results with their evidence) and `Next`
-(prompts to paste).
+| Kind | Name | Model · effort | Job |
+|:-----|:-----|:---------------|:----|
+| Agent | `explorer` | haiku `▰▱▱▱▱` | find and summarise code, logs, docs · read-only |
+| Agent | `architect` | opus `▰▰▰▱▱` · public API, threading: `▰▰▰▰▱` | options, flow, interfaces, work packages · read-only |
+| Agent | `engineer` | sonnet `▰▰▰▱▱` · mechanical: `▰▰▱▱▱` · hard: opus `▰▰▰▱▱` | one change, test first, from a full brief |
+| Agent | `reviewer` | sonnet `▰▰▰▱▱` · risky or designed: opus `▰▰▰▱▱` | findings with rule IDs · read-only |
+| Agent | `researcher` | sonnet `▰▰▰▱▱` | sourced evidence for one candidate model |
+| Agent | `claim-verifier` | haiku `▰▰▱▱▱` | re-reads one candidate's sources, blind to the claimed value |
+
+Effort: `▰▱▱▱▱` low · `▰▰▱▱▱` medium · `▰▰▰▱▱` high · `▰▰▰▰▱` xhigh
+
+- **Sonnet by default.** Opus only for a concurrency or memory-safety bug, a cause still unknown after a
+  reproduction attempt, a design, and the review of those.
+- **Design first, only when it pays.** Work that splits into packages sharing an interface or a data flow goes to
+  `architect`; you approve the design before any engineer starts.
+- **A brief, not a chat.** Every engineer gets `Goal · Done when · Facts · Files · Constraints · Ruled out · Mode`.
+- **Re-brief before escalating.** Failed on the brief: fix it, same model. Failed on the reasoning: sonnet → opus →
+  opus `▰▰▰▰▱` once, then a report. At most three attempts.
 
 ## Unattended runs
 

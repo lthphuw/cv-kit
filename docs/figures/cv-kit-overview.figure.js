@@ -1,57 +1,97 @@
-// cv-kit overview: who does what in /cv-kit:develop and /cv-kit:research.
-// Sources: skills/develop/SKILL.md (flow and routing table), skills/research/SKILL.md (pipeline),
-// agents/*.md (model, effort and tools of each agent). Build:
+// cv-kit overview: who does what in /cv-kit:develop and /cv-kit:research, and why.
+// Sources: skills/develop/SKILL.md (flow, routing table, brief, what comes back), skills/research/SKILL.md
+// (pipeline), agents/*.md (model, effort and tools of each agent), scripts/lint_research.py (verdicts). Build:
 //   python3 skills/figure/scripts/build_figure.py docs/figures/cv-kit-overview.figure.js docs/figures/cv-kit-overview.html
 //   python3 skills/figure/scripts/check_figure.py docs/figures/cv-kit-overview.html --png docs/assets/overview.png --bare
-// Blue boxes are read-only agents, the yellow box is the only agent that edits code, white boxes are
-// the main thread, green boxes are what you get.
+// Blue boxes are agents that cannot edit your code, the purple box is the only agent that does, white boxes are
+// the main thread, green boxes are what you get, yellow notes say why.
 const FIGURE = {
   title: "cv-kit: one prompt, agents sized to the task",
   subtitle: "The skill scopes the work on the main thread and hands each step to the cheapest agent that can do it.",
   width: 1760,
-  height: 630,
+  height: 930,
   draw(k) {
-    const { card, panel, text, connect, box, left } = k;
-    const W = 250, H = 120;
+    const { card, panel, text, label, connect, box, left, note, pointer } = k;
+    const W = 250, H = 140;
     const X = (i) => 50 + i * 283;
-    const READ = { fill: "#e4eefb" }, EDIT = { fill: "#fff3c4" };
+    const READ = { fill: "#e4eefb" }, EDIT = { fill: "#efe7fb" };
     const chain = (boxes) => boxes.slice(1).forEach((b, i) =>
       connect([[boxes[i].right, boxes[i].mid], [b.left, b.mid]]));
 
     // ---- /cv-kit:develop ----
-    panel(30, 30, 1700, 230, "plain", "develop");
+    panel(30, 30, 1700, 460, "plain", "develop");
     text(54, 66, "/cv-kit:develop", 24, true, "start");
-    const T1 = 100;
-    chain([
-      card(X(0), T1, W, "plain", "Brief", ["scope, one question", "at a time, your yes"], { h: H }),
-      card(X(1), T1, W, "plain", "explorer", ["haiku, low", "facts with path:line"], { h: H, style: READ }),
-      card(X(2), T1, W, "plain", "architect", ["opus, high: only when", "packages share an interface"], { h: H, style: READ }),
-      card(X(3), T1, W, "plain", "engineer x N", ["sonnet, high", "red, green, refactor"], { h: H, style: EDIT }),
-      card(X(4), T1, W, "plain", "reviewer", ["sonnet, opus if risky", "findings with rule IDs"], { h: H, style: READ }),
-      card(X(5), T1, W, "store", "Report", ["cause, tests by name,", "literal command output"], { h: H }),
-    ]);
+    const T1 = 150;
+    const brief = card(X(0), T1, W, "plain", "Brief",
+      ["scope on the main thread,", "one question at a time,", "your yes before any code"], { h: H });
+    const explorer = card(X(1), T1, W, "plain", "explorer",
+      ["haiku, low, read-only", "finds the code, returns", "facts with path:line"], { h: H, style: READ });
+    const architect = card(X(2), T1, W, "plain", "architect",
+      ["opus, high, read-only", "options, flow, interfaces,", "packages, then your yes"], { h: H, style: READ });
+    const engineer = card(X(3), T1, W, "plain", "engineer x N",
+      ["sonnet, high, edits code", "failing test, then the fix,", "parallel in worktrees"], { h: H, style: EDIT });
+    const reviewer = card(X(4), T1, W, "plain", "reviewer",
+      ["sonnet, high, read-only", "reads the pasted diff,", "findings with rule IDs"], { h: H, style: READ });
+    const report = card(X(5), T1, W, "store", "Report",
+      ["cause at path:line,", "tests by name,", "literal command output"], { h: H });
+    chain([brief, explorer, architect, engineer, reviewer, report]);
+
+    // One package needs no design: explorer's facts go straight into the engineer's brief.
+    const SKIP = T1 - 30;
+    connect([[explorer.cx, explorer.top], [explorer.cx, SKIP], [engineer.cx, SKIP], [engineer.cx, engineer.top]]);
+    label(architect.cx, SKIP - 12, "one package: no design", 20);
+
+    // Blocking findings go back to an engineer.
+    const BACK = T1 + H + 32;
+    connect([[reviewer.cx, reviewer.bottom], [reviewer.cx, BACK], [engineer.cx, BACK], [engineer.cx, engineer.bottom]]);
+    label((engineer.cx + reviewer.cx) / 2, BACK + 28, "blocking findings: fix, test first", 20);
+
+    const N1 = T1 + H + 82;
+    note(X(0), N1, 440, ["Failed on the brief: fix it, same model.",
+      "Failed on the reasoning: sonnet -> opus", "-> opus at xhigh once, then a report."]);
+    const why = note(X(2) - 30, N1, 270, ["Only when packages share", "an interface or a data flow."]);
+    pointer([[architect.cx, why.top], [architect.cx, architect.bottom]]);
+    const how = note(X(3) - 30, N1, 330, ["Brief: Goal, Done when, Facts, Files,",
+      "Constraints, Ruled out, Mode.", "Threads or memory safety: opus."]);
+    pointer([[engineer.left + 60, how.top], [engineer.left + 60, engineer.bottom]]);
+    const risk = note(X(4) + 40, N1, 300, ["Opus for concurrency, security,", "published numbers and",
+      "designed or opus-written code."]);
+    pointer([[reviewer.right - 40, risk.top], [reviewer.right - 40, reviewer.bottom]]);
 
     // ---- /cv-kit:research ----
-    panel(30, 300, 1700, 230, "plain", "research");
-    text(54, 336, "/cv-kit:research", 24, true, "start");
-    const T2 = 370;
-    chain([
-      card(X(0), T2, W, "plain", "Brief", ["task, metric, split,", "hardware, licence"], { h: H }),
-      card(X(1), T2, W, "plain", "Scout, shortlist", ["cut by licence first,", "your yes, 6 at most"], { h: H }),
-      card(X(2), T2, W, "plain", "researcher", ["sonnet, high", "one per candidate"], { h: H, style: READ }),
-      card(X(3), T2, W, "plain", "claim-verifier", ["haiku, medium: blind", "to the claimed value"], { h: H, style: READ }),
-      card(X(4), T2, W, "plain", "Lint", ["confirmed or differs,", "claim by claim"], { h: H }),
-      card(X(5), T2, W, "store", "report.md", ["7 key points at most,", "every number sourced"], { h: H }),
-    ]);
+    panel(30, 520, 1700, 330, "plain", "research");
+    text(54, 556, "/cv-kit:research", 24, true, "start");
+    const T2 = 590;
+    const frame = card(X(0), T2, W, "plain", "Brief",
+      ["task, metric, dataset split,", "hardware, latency budget,", "licence limit"], { h: H });
+    const scout = card(X(1), T2, W, "plain", "Scout, shortlist",
+      ["arXiv, HF, CVF, GitHub,", "cut by licence first,", "your yes, 6 at most"], { h: H });
+    const researcher = card(X(2), T2, W, "plain", "researcher x N",
+      ["sonnet, high, per candidate", "paper, model card, repo", "at a pinned commit"], { h: H, style: READ });
+    const verifier = card(X(3), T2, W, "plain", "claim-verifier x N",
+      ["haiku, medium", "re-reads each source, blind", "to the claimed value"], { h: H, style: READ });
+    const lint = card(X(4), T2, W, "plain", "Lint",
+      ["confirmed, differs,", "wrong-paper, absent,", "unreachable"], { h: H });
+    const paper = card(X(5), T2, W, "store", "report.md",
+      ["overview, 7 key points,", "comparison table,", "every number sourced"], { h: H });
+    chain([frame, scout, researcher, verifier, lint, paper]);
+
+    const N2 = T2 + H + 30;
+    const memory = note(X(2) - 30, N2, 310, ["Nothing from memory: each number", "is a quote from a saved copy."]);
+    pointer([[researcher.cx, memory.top], [researcher.cx, researcher.bottom]]);
+    const differs = note(X(4) - 10, N2, 270, ["A differs is shown to you,", "never resolved silently."]);
+    pointer([[lint.cx, differs.top], [lint.cx, lint.bottom]]);
 
     // ---- Legend ----
-    box(50, 570, 40, 26, "plain");
-    left(102, 588, "main thread", 20);
-    box(330, 570, 40, 26, "plain", "", READ);
-    left(382, 588, "agent, cannot edit your code", 20);
-    box(760, 570, 40, 26, "plain", "", EDIT);
-    left(812, 588, "agent, edits code test first", 20);
-    box(1180, 570, 40, 26, "store");
-    left(1232, 588, "what you get", 20);
+    box(50, 880, 40, 26, "plain");
+    left(102, 898, "main thread", 20);
+    box(300, 880, 40, 26, "plain", "", READ);
+    left(352, 898, "agent, cannot edit your code", 20);
+    box(700, 880, 40, 26, "plain", "", EDIT);
+    left(752, 898, "agent, edits code test first", 20);
+    box(1090, 880, 40, 26, "store");
+    left(1142, 898, "what you get", 20);
+    box(1340, 880, 40, 26, "note");
+    left(1392, 898, "why", 20);
   }
 };
