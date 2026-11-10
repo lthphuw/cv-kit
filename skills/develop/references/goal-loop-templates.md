@@ -17,7 +17,7 @@ a good condition has one measurable end state, the command that proves it, const
 
 /goal follow /cv-kit:review. Review the diff against main; end with the line `Blocking: N Critical, M Major` and every finding carrying a rule ID and a path:line. Change no file. Or stop after 10 turns.
 
-/goal follow /cv-kit:research. research/small-objects/report.md exists, its claims.json passes `lint_research.py --checks checks.json --report report.md`, and every number cites a saved source. Run nothing from a clone. Or stop after 30 turns.
+/goal follow /cv-kit:research. research/small-objects/report.md exists, its claims.json passes `lint_research.py --checks checks-*.json --report report.md`, and every number cites a saved source. Run nothing from a clone. Or stop after 30 turns.
 ```
 
 Keep tests in the foreground: a background run defers the judge's check.

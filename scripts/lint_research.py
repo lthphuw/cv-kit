@@ -1,6 +1,7 @@
 """Reject a research claims ledger, the verifier's checks, or a report the evidence does not support.
 
-Usage: lint_research.py CLAIMS.json [--blind OUT.json] [--checks CHECKS.json] [--report REPORT.md]
+Usage: lint_research.py CLAIMS.json [--blind OUT.json] [--checks CHECKS.json ...] [--candidate SLUG]
+                        [--report REPORT.md]
 
 Every claim needs its common fields, the fields its kind needs, and exactly one source. The
 value must appear as a whole number in the quote. A claim with a `source_file` (a saved copy
@@ -11,6 +12,10 @@ so it copies what the source says before it can know what the scout claimed. The
 answers in a checks file, one entry per claim: `found` with the text it copied at the locator,
 or `wrong-paper`, `absent` or `unreachable` with a note. --checks merges them and sets each
 claim's verdict: `confirmed` when the claimed value is in the copied text, `differs` when not.
+The copied text is the passage at the locator, at most 800 characters: a whole table would
+confirm every number in it. --checks takes one file per verifier and merges them; --candidate
+keeps only the claims whose id is `<SLUG>-<n>`, so a verifier can lint its own file; it cannot
+be combined with --blind or --report, which need the whole ledger.
 --report (which needs --checks) also checks the report: every claim tag names a claim, a claim
 that is not `confirmed` is cited only on a line that says "unconfirmed", and every number in
 the comparison table under `## Comparison` is the value of a claim its row names. The report is
@@ -57,6 +62,7 @@ BULLET_RE = re.compile(r"\s*(?:[-*+]|\d+[.)])\s")
 NUMBERED_RE = re.compile(r"\d+\.\s")
 MAX_KEY_POINTS = 7
 MAX_WORDS = 400
+MAX_FOUND = 800
 SKIPPED_TAGS = {"script", "style", "annotation", "annotation-xml"}
 
 
@@ -191,6 +197,9 @@ def merge_checks(claims: list[dict], checks: list[dict]) -> tuple[list[dict], li
             errors.append(f"{tag}: status {status!r} must be one of {sorted(STATUSES)}")
         elif status == "found" and (_is_blank(entry.get("found")) or not isinstance(entry["found"], str)):
             errors.append(f"{tag}: status found needs found, the text copied at the locator")
+        elif status == "found" and len(entry["found"]) > MAX_FOUND:
+            errors.append(f"{tag}: found is {len(entry['found'])} characters; copy only the row or sentence "
+                          f"at the locator, at most {MAX_FOUND}")
         elif status != "found" and _is_blank(entry.get("note")):
             errors.append(f"{tag}: status {status!r} needs a note saying why")
         by_id.setdefault(tag, entry)
@@ -329,7 +338,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("claims", type=Path)
     parser.add_argument("--blind", type=Path, help="write the ledger the verifier is given")
-    parser.add_argument("--checks", type=Path, help="the verifier's checks file")
+    parser.add_argument("--checks", type=Path, nargs="+", help="the verifiers' checks files, merged")
+    parser.add_argument("--candidate", help="keep only the claims whose id is <candidate>-<n>")
     parser.add_argument("--report", type=Path, help="the report to check against the ledger")
     try:
         args = parser.parse_args(sys.argv[1:] if argv is None else argv)
@@ -338,15 +348,24 @@ def main(argv: list[str] | None = None) -> int:
     if args.report is not None and args.checks is None:
         print("--report needs --checks: a report is checked against verified claims", file=sys.stderr)
         return 2
+    if args.candidate is not None and (args.blind is not None or args.report is not None):
+        print("--candidate is for one verifier's own checks; --blind and --report need the whole ledger",
+              file=sys.stderr)
+        return 2
     try:
         claims = _load(args.claims, "claims")
-        checks = _load(args.checks, "checks") if args.checks is not None else None
+        checks = [e for path in args.checks for e in _load(path, "checks")] if args.checks is not None else None
         text = args.report.read_text(encoding="utf-8") if args.report is not None else None
         appendix = args.report.with_name("appendix.md") if args.report is not None else None
         appendix_text = appendix.read_text(encoding="utf-8") if appendix is not None and appendix.is_file() else None
     except (OSError, ValueError) as error:
         print(f"cannot read input: {error}", file=sys.stderr)
         return 1
+    if args.candidate is not None:
+        claims = [c for c in claims if str(c.get("id", "")).rpartition("-")[0] == args.candidate]
+        if not claims:
+            print(f"no claim of candidate {args.candidate!r} in {args.claims}", file=sys.stderr)
+            return 1
     errors = lint_claims(claims, args.claims.parent)
     given = claims
     if checks is not None:

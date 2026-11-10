@@ -229,6 +229,14 @@ def test_checks_must_match_the_ledger_one_to_one(checks, message):
     assert any(message in e for e in merge_checks([GOOD], checks)[1])
 
 
+def test_copied_text_must_be_the_passage_not_the_whole_table():
+    """A verifier that pastes a whole table would confirm every number in it."""
+    passage = "Table 3: RF-DETR (L) 54.7 AP "
+    errors = merge_checks([GOOD], [{**FOUND, "found": passage + "x" * (801 - len(passage))}])[1]
+    assert any("rf-detr-1" in e and "801 characters" in e for e in errors)
+    assert merge_checks([GOOD], [{**FOUND, "found": passage + "x" * (800 - len(passage))}])[1] == []
+
+
 # ---- saved copy of the source ----
 
 def test_quote_is_found_in_a_saved_html_page(tmp_path):
@@ -465,3 +473,38 @@ def test_cli_missing_file_is_a_clean_error(tmp_path, capsys):
 def test_cli_usage(capsys):
     assert main([]) == 2
     assert main(["a", "--nope", "b"]) == 2
+
+
+OTHER = {**GOOD, "id": "rf-detr-seg-1", "value": "48.1", "quote": "RF-DETR-Seg reaches 48.1 AP on COCO val2017"}
+OTHER_FOUND = {"id": "rf-detr-seg-1", "status": "found", "found": "Table 5: RF-DETR-Seg 48.1 AP"}
+
+
+def test_cli_merges_one_checks_file_per_candidate(tmp_path, capsys):
+    claims = write(tmp_path / "claims.json", [GOOD, OTHER])
+    first = write(tmp_path / "checks-rf-detr.json", [FOUND])
+    second = write(tmp_path / "checks-rf-detr-seg.json", {"checks": [OTHER_FOUND]})
+    assert main([claims, "--checks", first, second]) == 0
+    assert "2 confirmed" in capsys.readouterr().out
+    assert main([claims, "--checks", first]) == 1
+
+
+def test_cli_candidate_limits_the_ledger_to_one_candidate(tmp_path, capsys):
+    """A verifier lints its own file; the other candidates' claims are not its to check."""
+    claims = write(tmp_path / "claims.json", [GOOD, OTHER])
+    first = write(tmp_path / "checks-rf-detr.json", [FOUND])
+    assert main([claims, "--checks", first, "--candidate", "rf-detr"]) == 0
+    assert "1 claims" in capsys.readouterr().out
+    assert main([claims, "--checks", first, "--candidate", "rf-detr-seg"]) == 1
+    assert main([claims, "--candidate", "yolo"]) == 1
+    assert "no claim" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("flag", ["--blind", "--report"])
+def test_cli_candidate_is_for_a_verifier_only(tmp_path, capsys, flag):
+    """With --blind it would overwrite the ledger every verifier reads; with --report other candidates' tags fail."""
+    claims = write(tmp_path / "claims.json", [GOOD, OTHER])
+    checks = write(tmp_path / "checks-rf-detr.json", [FOUND])
+    target = tmp_path / ("blind.json" if flag == "--blind" else "report.md")
+    target.write_text("keep", encoding="utf-8")
+    assert main([claims, "--checks", checks, "--candidate", "rf-detr", flag, str(target)]) == 2
+    assert "--candidate" in capsys.readouterr().err and target.read_text(encoding="utf-8") == "keep"

@@ -23,7 +23,7 @@ python3 "${CLAUDE_SKILL_DIR}/../../scripts/research_workspace.py" clone <slug> <
 
 Papers and pages go in `sources/` (`curl -L -o`, not WebFetch, which returns a summary), clones in `repos/`
 (git-ignored; each clone's url and commit are in `evidence/repos.json`), and the rest in the folder:
-`brief.md`, `scout-<candidate>.json`, `claims.json`, `blind.json`, `checks.json`, `report.md`, `appendix.md`. Read the
+`brief.md`, `scout-<candidate>.json`, `claims.json`, `blind.json`, `checks-<candidate>.json`, `report.md`, `appendix.md`. Read the
 code in a clone to compare it with the paper. Run nothing from a clone, not even its tests or installer, unless the
 user says yes; a run happens in a throwaway environment and its result is labelled `reproduced`.
 
@@ -53,15 +53,16 @@ user says yes; a run happens in a throwaway environment and its result is labell
    candidate whose first report left contradictions unresolved gets `model` `opus`.
 5. **Cross-check.** Merge the scouts' `claims` into `claims.json` and carry their `not_found`, `access_failed` and
    `caveats` into the report. Run LINT `claims.json --blind blind.json`, where LINT is
-   `python3 "${CLAUDE_SKILL_DIR}/../../scripts/lint_research.py"`. Dispatch one `claim-verifier` with `blind.json`; it
-   never sees the scouts' values. Run LINT `claims.json --checks checks.json` and show the user `wrong-paper`,
+   `python3 "${CLAUDE_SKILL_DIR}/../../scripts/lint_research.py"`. Dispatch one `claim-verifier` per candidate that has
+   claims, in parallel, with `blind.json`, the candidate's slug and its output path `checks-<candidate>.json`; none sees the
+   scouts' values. Run LINT `claims.json --checks checks-*.json` and show the user `wrong-paper`,
    `differs` (both texts), `absent`, then `unreachable`. An unreachable source does not make a claim false; a
    `differs` is never resolved silently.
 6. **Synthesise.** Write `report.md` and `appendix.md` as `${CLAUDE_SKILL_DIR}/references/report-template.md` says:
    the report is short (Overview, at most 7 key points, comparison table, at most 3 next steps; at most 400 words
    outside the table) and everything else goes to the appendix, `not_found` and `access_failed` included. Compare
    numbers only when dataset, split, resolution and hardware match; with fewer than two comparable candidates, do not
-   rank, and make the next steps the output. Then run LINT `claims.json --checks checks.json --report report.md`
+   rank, and make the next steps the output. Then run LINT `claims.json --checks checks-*.json --report report.md`
    (it also checks `appendix.md`) and fix every error.
 7. **Hand off.** In chat print only the Overview (in place of `Summarization:`) and the path to `report.md`, then
    `Next:`; no recap of the key points, table or appendix. If the `rnd-notebook` skill is installed, offer to record the decision there.
