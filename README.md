@@ -3,33 +3,9 @@
 [![validate](https://github.com/lthphuw/cv-kit/actions/workflows/validate.yml/badge.svg)](https://github.com/lthphuw/cv-kit/actions/workflows/validate.yml)
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
-A Claude Code plugin for computer-vision engineers who write Python, edge C++ and Go. One prompt gives you tested
-code, sourced model research or a strict review, with each step handed to the cheapest agent that can do it.
-Commits follow Conventional Commits, without AI trailers.
-
-![Diagram of the develop flow (brief, explorer, architect, engineer x N, reviewer, report) and the research flow (brief, scout and shortlist, researcher x N, claim-verifier x N, lint, report.md)](docs/assets/overview.png)
-
-<sub>White boxes run on the main thread, blue agents only read, the purple engineer edits code test first, and the yellow notes say when a step runs.</sub>
-
-## What you see
-
-![Live agent rows during a develop run: explorer, architect, two engineers in parallel, then the reviewer](docs/assets/live-rows.gif)
-
-<sub>A develop run for "add a tracker between detection and the writer": explorer and architect finish, two engineers build the two packages in parallel, and the reviewer ends with `Blocking: 0 Critical, 0 Major`.</sub>
-
-One live row per agent: `icon agent (model effort) task tokens elapsed`, with `◐` running, `○` stalled, `✓` done,
-`✗` failed, `■` killed. When an agent finishes you get a `Progress` line per agent; a finished task ends with
-`Summarization` (results with their evidence) and `Next` (prompts to paste):
-
-```
-● Summarization:
-  - iou in vision/utils.py, tests in tests/test_iou.py
-  - pytest -q: 9 passed
-  - Nothing is committed.
-  Next:
-  - /cv-kit:review the diff against main
-  - commit the change
-```
+A Claude Code plugin for computer-vision engineers who write Python, edge C++ and Go. You describe the work in one
+prompt. cv-kit sizes it, hands each step to the cheapest agent that can do it, and ends with evidence you can check:
+the literal test output, a claim re-read from its source, a finding at `path:line`.
 
 ## Install
 
@@ -44,6 +20,97 @@ One live row per agent: `icon agent (model effort) task tokens elapsed`, with `�
 Needs Claude Code ≥ 2.1.295 and `python3`. `figure` also needs Python ≥ 3.10 and Chrome or Chromium (`CHROME=` if not
 on PATH; not the snap build, it cannot read `/tmp`).
 
+## What you see
+
+Both recordings are scripted examples, not measured results. The agent rows in them are drawn by the plugin's own
+status line, `hooks/agent_status.py`.
+
+### A develop run
+
+![A develop run: the brief and your yes, explorer, architect and the design approval, two engineers in parallel with a Progress block, the reviewer, then Summarization and Next](docs/assets/develop.gif)
+
+<sub>"Add a tracker between detection and the writer": you approve the brief, the explorer finds where frames reach the writer, you approve the architect's two packages, two engineers build them in parallel, and the reviewer reads the diff.</sub>
+
+Nothing is built before your yes on the brief, and on the design when there is one. The run ends with what was
+skipped or is at risk, then the results with their evidence, then prompts to paste:
+
+```
+● Nothing is committed.
+  Summarization:
+  - Tracker in vision/track.py, called at pipeline.py:57
+  - 9 new tests, each failed first
+  - pytest -q: 50 passed   ruff check .: All checks passed!
+  - Review: Blocking: 0 Critical, 0 Major
+  Next:
+  - commit the change
+```
+
+### A research run
+
+![A research run: the brief, a shortlist of six candidates with three excluded by licence, three researchers in parallel, three claim-verifiers, the lint verdicts, then the Overview and the path to report.md](docs/assets/research.gif)
+
+<sub>"Which detector for 30 FPS on a Jetson Orin NX, Apache-2.0 only": the licence cuts three of six candidates, one researcher reads each of the rest, a verifier re-reads the same sources without seeing the claimed values, and the lint counts the verdicts.</sub>
+
+The chat shows only the Overview and the path. Everything else is on disk, in `research/<slug>/`:
+
+```
+research/detector-orin-nx/
+├── report.md               what you read: one screen, at most 400 words outside the table
+├── appendix.md             exclusions · not found or not checked · caveats · ledger · sources
+├── brief.md                task · metric · dataset and split · hardware · latency · licence
+├── scout-rf-detr.json      one researcher's evidence, one file per candidate
+├── claims.json             every claim: value, verbatim quote, source, locator, label
+├── blind.json              the same claims without their values, for the verifiers
+├── checks-rf-detr.json     one verifier's verdict per claim, one file per candidate
+├── sources/                the saved papers, model cards and READMEs the quotes come from
+├── repos/                  clones at a recorded commit, git-ignored, never run
+└── evidence/repos.json     url, ref and commit of each clone
+```
+
+`report.md` has four parts: Overview, at most 7 key points, the comparison table and at most 3 next steps.
+
+<details>
+<summary>Example <code>report.md</code>, with the numbers left out (<code>…</code>)</summary>
+
+```markdown
+# Detector: which model for 30 FPS on a Jetson Orin NX, Apache-2.0 only?
+2026-11-11, brief 3f9c2ab, cv-kit 0.9.0.
+
+## Overview
+Start with RF-DETR-S. No candidate publishes latency on an Orin NX; every FPS figure comes from a T4, so the
+30 FPS budget is unconfirmed. Confidence: medium.
+
+## Key points
+1. **No latency was measured on the target board**
+   All three report T4 TensorRT latency [rf-detr-4] [d-fine-3] [rt-detrv2-2].
+2. **One AP has two values**
+   Paper and README differ for RT-DETRv2-S [rt-detrv2-3], unconfirmed; both rows are in the table.
+
+## Comparison
+| Candidate | Value | Metric | Dataset and split | Resolution | Hardware | Version | Licence    | Claim       |
+|-----------|-------|--------|-------------------|------------|----------|---------|------------|-------------|
+| RF-DETR-S | …     | AP     | COCO val2017      | …          | n/a      | …       | Apache-2.0 | [rf-detr-2] |
+| D-FINE-S  | …     | AP     | COCO val2017      | …          | n/a      | …       | Apache-2.0 | [d-fine-1]  |
+
+## Next steps
+1. Benchmark RF-DETR-S and D-FINE-S at FP16 on the Orin NX: FPS at batch 1 on 1,000 val2017 images.
+
+Details, exclusions and sources: [appendix.md](appendix.md).
+```
+
+A real report carries the numbers, each with the tag of its claim in `claims.json`.
+
+</details>
+
+A claim's verdict is `confirmed`, `differs`, `wrong-paper`, `absent` or `unreachable`. Only a `confirmed` claim is
+cited without the word "unconfirmed", and `scripts/lint_research.py` fails the report otherwise.
+
+### The live rows
+
+One row per agent: `icon agent (model effort) task tokens elapsed`, with `◐` running, `○` stalled, `✓` done,
+`✗` failed, `■` killed. When an agent finishes while others still run you get a `Progress` line per agent; a
+finished task ends with `Summarization` and `Next`.
+
 ## Skills
 
 Name a skill, or describe the work: "NMS crashes on empty input" loads `develop`.
@@ -57,6 +124,10 @@ Name a skill, or describe the work: "NMS crashes on empty input" loads `develop`
 | Skill | `figure` | `low-level figure with tensor shapes for the neck and head` | hand-drawn HTML + PNG (SVG for papers), like the one above |
 
 ## Flows
+
+![Diagram of the develop flow (brief, explorer, architect, engineer x N, reviewer, report) and the research flow (brief, scout and shortlist, researcher x N, claim-verifier x N, lint, report.md)](docs/assets/overview.png)
+
+<sub>White boxes run on the main thread, blue agents only read, the purple engineer edits code test first, and the yellow notes say when a step runs.</sub>
 
 ### `/cv-kit:develop`
 
@@ -208,7 +279,8 @@ claude plugin validate . --strict
 
 CI runs the same. Change the plugin test first; run `scripts/run_evals.sh` before a release. How to contribute:
 `AGENTS.md`. Reference material: `shared/`, `hooks/README.md`, `evals/README.md`. The overview figure is built from
-`docs/figures/cv-kit-overview.figure.js` with the `figure` skill's own scripts.
+`docs/figures/cv-kit-overview.figure.js` with the `figure` skill's own scripts, and the two recordings by
+`python3 docs/figures/demo_gifs.py` (Chrome and ffmpeg).
 
 ## Licence
 

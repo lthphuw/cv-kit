@@ -267,3 +267,12 @@ class TestDocs:
     def test_the_hook_readme_says_the_hook_is_not_absolute(self):
         text = (ROOT / "hooks/README.md").read_text(encoding="utf-8")
         assert "onFailure" in text and "mod" in text.lower()
+
+    def test_the_readme_demos_exist(self):
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        images = re.findall(r"!\[[^\]]*\]\(([^)]+)\)", text)
+        for name in ("docs/assets/develop.gif", "docs/assets/research.gif"):
+            assert name in images, name
+        for image in images:
+            if not image.startswith("http"):
+                assert (ROOT / image).is_file(), image
