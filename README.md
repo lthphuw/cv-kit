@@ -9,6 +9,31 @@ A Claude Code plugin for computer-vision engineers who write Python, edge C++ an
 
 <sub>White boxes run on the main thread, blue agents only read, the purple engineer edits code test first, and the yellow notes say when a step runs.</sub>
 
+## Install
+
+```
+/plugin marketplace add lthphuw/cv-kit
+/plugin install cv-kit@cv-kit
+
+/plugin marketplace update cv-kit     # update
+/reload-plugins
+```
+
+Needs Claude Code ≥ 2.1.295 and `python3`. `figure` also needs Python ≥ 3.10 and Chrome or Chromium (`CHROME=` if not
+on PATH; not the snap build, it cannot read `/tmp`).
+
+## Skills
+
+Name a skill, or describe the work: "NMS crashes on empty input" loads `develop`.
+
+| Kind | Name | Example prompt | You get |
+|:-----|:-----|:---------------|:--------|
+| Skill | `develop` | `NMS in src/post/nms.cc crashes on zero detections` | failing test → fix → literal `ctest` output |
+| | | `set this repo up with strict ruff and mypy` | lint configs and `.claude/rules/` after your yes, existing files kept |
+| Skill | `research` | `which detector for 30 FPS on Orin NX, Apache-2.0` | short report, every number re-checked against its source |
+| Skill | `review` | `train/val split in data/split.py, any leakage?` | `[Severity] RULE-ID path:line` findings → `Blocking: N Critical, M Major` |
+| Skill | `figure` | `low-level figure with tensor shapes for the neck and head` | hand-drawn HTML + PNG (SVG for papers), like the one above |
+
 ## What you see
 
 Both recordings are scripted examples, not measured results. The agent rows in them are drawn by the plugin's own
@@ -163,31 +188,6 @@ commit   when you ask ─► type(scope): description ─► git / svn commit
 
 The commit rule is `rules/commit-vcs.md` (Conventional Commits 1.0.0). `develop` reads it from the plugin; copied into
 `.claude/rules/`, it holds in every session.
-
-## Install
-
-```
-/plugin marketplace add lthphuw/cv-kit
-/plugin install cv-kit@cv-kit
-
-/plugin marketplace update cv-kit     # update
-/reload-plugins
-```
-
-Needs Claude Code ≥ 2.1.295 and `python3`. `figure` also needs Python ≥ 3.10 and Chrome or Chromium (`CHROME=` if not
-on PATH; not the snap build, it cannot read `/tmp`).
-
-## Skills
-
-Name a skill, or describe the work: "NMS crashes on empty input" loads `develop`.
-
-| Kind | Name | Example prompt | You get |
-|:-----|:-----|:---------------|:--------|
-| Skill | `develop` | `NMS in src/post/nms.cc crashes on zero detections` | failing test → fix → literal `ctest` output |
-| | | `set this repo up with strict ruff and mypy` | lint configs and `.claude/rules/` after your yes, existing files kept |
-| Skill | `research` | `which detector for 30 FPS on Orin NX, Apache-2.0` | short report, every number re-checked against its source |
-| Skill | `review` | `train/val split in data/split.py, any leakage?` | `[Severity] RULE-ID path:line` findings → `Blocking: N Critical, M Major` |
-| Skill | `figure` | `low-level figure with tensor shapes for the neck and head` | hand-drawn HTML + PNG (SVG for papers), like the one above |
 
 ## Agents
 
