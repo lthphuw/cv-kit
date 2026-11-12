@@ -14,7 +14,7 @@ EVALS = ROOT / "evals"
 CASES = sorted(p.parent for p in EVALS.glob("*/prompt.md"))
 GRADERS = sorted(p for case in CASES for p in (case / "graders").glob("*.md"))
 
-# The documented format: https://code.claude.com/docs/en/plugin-evals.md, checked 2026-10-15 (Claude Code 2.1.300).
+# The documented format: https://code.claude.com/docs/en/plugin-evals.md, checked 2026-11-11 (Claude Code 2.1.322).
 PROMPT_KEYS = {"schema_version", "name", "description", "tags", "plugins", "runs", "expected_outcome", "model",
                "max_turns", "timeout_seconds", "allowed_tools", "append_system_prompt", "env"}
 READ_ONLY_TOOLS = {"Read", "Glob", "Grep", "NotebookRead", "Skill", "AskUserQuestion", "Agent", "TodoWrite",
@@ -76,13 +76,25 @@ REGEX_SAMPLES = {
          '{"name":"Edit","input":{"file_path":"/w/src/post/nms.cc"}}',
          '{"name":"Read","input":{"file_path":"/w/src/post/nms.cc"}}'],
     ),
-    "nothing-run-from-clone": (
-        ['{"type":"tool_use","name":"Bash","input":{"command":"cd research/x/repos/y && pytest -q","description":"d"}}',
-         '{"type":"tool_use","name":"Bash","input":{"command":"pip install -e research/x/repos/y"}}',
-         '{"type":"tool_use","name":"Bash","input":{"command":"cmake -S research/x/repos/y -B b"}}'],
-        ['{"type":"tool_use","name":"Bash","input":{"command":"python3 /p/scripts/research_workspace.py init deimv2"}}',
-         '{"type":"tool_use","name":"Bash","input":{"command":"curl -sL -o research/x/sources/p.xml http://a"}}',
-         '{"type":"tool_use","name":"Read","input":{"file_path":"/w/research/x/repos/y/setup.py"}}'],
+    "report-format": (
+        ["[Critical] CPP-ERR-8 snippet:5\nWhat: it throws.\n\nBlocking: 2 Critical, 1 Major",
+         "**[Major] PY-ML-1** snippet:9\nWhat: unseeded shuffle.\n\n**Blocking:** 0 Critical, 1 Major",
+         "[Critical] no rule snippet:3\nWhat: frames of one video on both sides.\nBlocking: 1 Critical, 0 Major"],
+        ["Critical: the constructor throws (line 5).\nBlocking: 1 Critical, 0 Major",
+         "[Critical] CPP-ERR-8 snippet:5\nWhat: it throws.\nVerdict: do not merge.",
+         "Blocking: 1 Critical, 0 Major\n\n[Critical] CPP-ERR-8 snippet:5"],
+    ),
+    "goal-line-bounded": (
+        ["```\n/goal follow /cv-kit:develop. letterbox is added. Or stop after 25 turns.\n```",
+         "`/goal`, because the task has an end.\n```\nletterbox exists; `pytest -q` exits 0. or stop after 15 turns\n```"],
+        ["/goal add letterbox. Or stop after 25 turns.", "```\n/goal add letterbox until pytest passes\n```",
+         "```\n/goal add letterbox\n```\nIt will stop after a while."],
+    ),
+    "goal-line-guards": (
+        ["Do not commit. Or stop after 25 turns. After two failed fixes, stop and report the literal output.",
+         "After two failed fixes, stop.\nno commit, no push"],
+        ["Do not commit. Or stop after 25 turns.", "After two failed fixes, stop and report.",
+         "Commit when green. After two failed fixes, stop."],
     ),
 }
 
@@ -292,6 +304,30 @@ AGENT_SAMPLES = {
         ['{"subagent_type":"cv-kit:explorer","model":"haiku","prompt":"p"}', '{"model":"haiku","subagent_type":"explorer"}'],
         ['{"subagent_type":"cv-kit:explorer","model":"opus"}', '{"subagent_type":"cv-kit:engineer","model":"haiku"}'],
     ),
+    "engineer-on-sonnet": (
+        ['{"description":"x","subagent_type":"cv-kit:engineer","model":"sonnet","effort":"high","prompt":"p"}',
+         '{"model":"sonnet","subagent_type":"engineer","prompt":"p"}'],
+        ['{"subagent_type":"cv-kit:engineer","model":"opus"}', '{"subagent_type":"cv-kit:explorer","model":"sonnet"}',
+         '{"subagent_type":"cv-kit:engineer","prompt":"use sonnet"}'],
+    ),
+    "no-opus-agent": (
+        ['{"subagent_type":"cv-kit:engineer","model":"opus","prompt":"p"}', '{"model": "opus","subagent_type":"reviewer"}'],
+        ['{"subagent_type":"cv-kit:engineer","model":"sonnet","prompt":"opus is not needed"}',
+         '{"subagent_type":"cv-kit:explorer","model":"haiku"}'],
+    ),
+    "brief-has-fields": (
+        ['{"subagent_type":"cv-kit:engineer","model":"sonnet","prompt":"Goal: g\\nDone when: d\\nFacts: f\\nFiles: a.py'
+         '\\nConstraints: c\\nRuled out: none\\nMode: fix"}',
+         '{"prompt":"Goal: g\\nDone when: d\\nFiles: a.py\\nMode: diagnose","subagent_type":"engineer"}'],
+        ['{"subagent_type":"cv-kit:engineer","model":"sonnet","prompt":"Fix the box bug in vision/letterbox.py"}',
+         '{"subagent_type":"cv-kit:engineer","prompt":"Goal: g\\nFiles: a.py\\nMode: fix"}',
+         '{"subagent_type":"cv-kit:explorer","prompt":"Goal: g\\nDone when: d\\nFiles: a.py\\nMode: fix"}'],
+    ),
+    "reviewer-dispatched": (
+        ['{"description":"x","subagent_type":"cv-kit:reviewer","model":"sonnet","prompt":"p"}',
+         '{"model":"opus","subagent_type":"reviewer"}'],
+        ['{"subagent_type":"cv-kit:engineer","prompt":"then call the reviewer"}', '{"subagent_type":"code-reviewer"}'],
+    ),
 }
 
 
@@ -311,7 +347,7 @@ FIXTURE_CASES = sorted(p for p in CASES if (p / "fixture.sh").exists())
 # Cases whose prompt names a file on purpose: the run starts in an empty folder and the reply must say it is missing.
 EMPTY_ON_PURPOSE = {"14-figure-fire-detector-docs"}
 # Cases whose prompt mentions a path only as part of what the user describes; nothing has to read it.
-PATH_ONLY_DESCRIBED = {"12-commit-fire-message"}
+PATH_ONLY_DESCRIBED: set[str] = set()
 PATH_IN_PROMPT = re.compile(r"(?<![\w/.])((?:[\w.-]+/)+[\w.-]+\.(?:py|cc|cpp|h|hpp|yaml|yml|txt|toml))\b")
 
 
@@ -351,11 +387,28 @@ def test_run_script_grants_what_the_skills_need():
             assert f"$root/{token} *" in script, f"{skill.parent.name} allows {token}; run_evals.sh does not grant it"
 
 
+def test_run_script_keeps_the_run_folders_out_of_the_shared_temp_dirs():
+    # On Linux the eval sandbox denies writes under /tmp, /var/tmp and /dev/shm. A run folder made there is read-only
+    # to every granted shell command, each command exits 1, and the skills' `!` commands fail, so no skill body loads.
+    script = (ROOT / "scripts" / "run_evals.sh").read_text(encoding="utf-8")
+    assert "export TMPDIR=" in script
+    for shared in ("/tmp", "/var/tmp", "/dev/shm"):
+        assert f"{shared}|{shared}/*" in script, f"run_evals.sh does not move TMPDIR out of {shared}"
+
+
 BASH_SAMPLES = {
+    "no-install-run": (
+        ['{"command":"S=/p/scripts; python3 $S/install_rules.py \\"$PWD\\"; python3 $S/install_configs.py \\"$PWD\\" --lang python"}',
+         '{"command":"python3 /p/scripts/install_configs.py . --lang python --force"}'],
+        ['{"command":"cat pyproject.toml; ls tests vision"}', '{"command":"python3 /p/scripts/project_facts.py facts ."}',
+         '{"command":"ls /p/scripts"}'],
+    ),
     "workspace-created": (
         ['{"command":"python3 /p/scripts/research_workspace.py init deimv2-loss-check && ls"}',
          '{"command":"python3 \\"/p/scripts/research_workspace.py\\" init deimv2-loss-check"}',
-         '{"command":"python3 /p/scripts/research_workspace.py clone deimv2 https://github.com/a/b --ref main"}'],
+         '{"command":"python3 /p/scripts/research_workspace.py clone deimv2 https://github.com/a/b --ref main"}',
+         # seen on 2026-11-11: the script path goes into a variable first
+         '{"command":"S=/p/scripts/research_workspace.py; python3 $S init deimv2-loss-check && python3 $S clone x u"}'],
         ['{"command":"ls research"}', '{"command":"python3 /p/scripts/lint_research.py research/x"}',
          '{"command":"python3 /p/scripts/research_workspace.py --help"}'],
     ),
@@ -372,3 +425,20 @@ def test_bash_graders_match_only_the_right_call(name):
         assert re.search(front["input_match"], sample), sample
     for sample in misses:
         assert not re.search(front["input_match"], sample), sample
+
+
+def test_samples_and_exemptions_name_things_that_exist():
+    # A sample set or an exemption that outlives its grader or case checks nothing.
+    stems = {p.stem for p in GRADERS}
+    for name in [*REGEX_SAMPLES, *AGENT_SAMPLES, *BASH_SAMPLES]:
+        assert name in stems, f"samples for {name!r}, but no grader has that name"
+    names = {c.name for c in CASES}
+    for name in EMPTY_ON_PURPOSE | PATH_ONLY_DESCRIBED:
+        assert name in names, f"{name!r} is exempt from the fixture check, but no case has that name"
+
+
+def test_a_never_called_tool_grader_sets_min_and_max():
+    for path in GRADERS:
+        front, _ = split(path)
+        if front.get("type") == "tool_used" and front.get("max") == 0:
+            assert front.get("min") == 0, f"{path}: min defaults to 1, so max 0 alone can never pass"

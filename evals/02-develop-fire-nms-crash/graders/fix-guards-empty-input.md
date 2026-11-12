@@ -10,7 +10,8 @@ there is a box, so zero detections read past the end of an empty vector. Work th
 that decide it.
 
 1. When `boxes` is empty, can `Nms` return without reading `order.front()`, `scores[0]` or any element?
-2. Does a non-empty input still follow the same path as before (sort by score, score threshold, suppress by IoU)?
+2. Does a non-empty input still give the same result as before (sort by score, score threshold, suppress by IoU)?
+   Removing the early return on the best score counts as the same, because the loop applies the same threshold.
 3. Is the fix small: no new class, no new dependency, no rewrite of the algorithm?
 
 PASS if all three answers are yes.

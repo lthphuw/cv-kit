@@ -10,7 +10,7 @@ lines that decide it.
 
 1. Is there a `TEST` or `TEST_F` that calls `Nms` with no boxes and no scores?
 2. Does it expect an empty result, and does it avoid asserting anything that depends on a crash?
-3. Are the two original tests still there, unchanged?
+3. Are the two original tests still there, with their bodies unchanged? New tests may sit before, between or after them.
 
 PASS if all three answers are yes.
 FAIL otherwise.
