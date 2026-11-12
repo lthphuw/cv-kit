@@ -3,22 +3,11 @@
 [![validate](https://github.com/lthphuw/cv-kit/actions/workflows/validate.yml/badge.svg)](https://github.com/lthphuw/cv-kit/actions/workflows/validate.yml)
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
-A Claude Code plugin for computer-vision engineers who write Python, edge C++ and Go. You describe the work in one
-prompt. cv-kit sizes it, hands each step to the cheapest agent that can do it, and ends with evidence you can check:
-the literal test output, a claim re-read from its source, a finding at `path:line`.
+A Claude Code plugin for computer-vision engineers who write Python, edge C++ and Go.
 
-## Install
+![cv-kit: one prompt, agents sized to the task. The develop flow (brief, explorer, architect, engineer x N, reviewer, report), the research flow (brief, scout and shortlist, researcher x N, claim-verifier x N, lint, report.md), the review flow (scope, reviewer, findings) and the figure flow (read the code, spec and build, figure)](docs/assets/overview.png)
 
-```
-/plugin marketplace add lthphuw/cv-kit
-/plugin install cv-kit@cv-kit
-
-/plugin marketplace update cv-kit     # update
-/reload-plugins
-```
-
-Needs Claude Code ≥ 2.1.295 and `python3`. `figure` also needs Python ≥ 3.10 and Chrome or Chromium (`CHROME=` if not
-on PATH; not the snap build, it cannot read `/tmp`).
+<sub>White boxes run on the main thread, blue agents only read, the purple engineer edits code test first, and the yellow notes say when a step runs.</sub>
 
 ## What you see
 
@@ -74,7 +63,7 @@ research/detector-orin-nx/
 
 ```markdown
 # Detector: which model for 30 FPS on a Jetson Orin NX, Apache-2.0 only?
-2026-11-11, brief 3f9c2ab, cv-kit 0.9.0.
+2026-11-11, brief 3f9c2ab, cv-kit 0.9.1.
 
 ## Overview
 Start with RF-DETR-S. No candidate publishes latency on an Orin NX; every FPS figure comes from a T4, so the
@@ -111,23 +100,7 @@ One row per agent: `icon agent (model effort) task tokens elapsed`, with `◐` r
 `✗` failed, `■` killed. When an agent finishes while others still run you get a `Progress` line per agent; a
 finished task ends with `Summarization` and `Next`.
 
-## Skills
-
-Name a skill, or describe the work: "NMS crashes on empty input" loads `develop`.
-
-| Kind | Name | Example prompt | You get |
-|:-----|:-----|:---------------|:--------|
-| Skill | `develop` | `NMS in src/post/nms.cc crashes on zero detections` | failing test → fix → literal `ctest` output |
-| | | `set this repo up with strict ruff and mypy` | lint configs and `.claude/rules/` after your yes, existing files kept |
-| Skill | `research` | `which detector for 30 FPS on Orin NX, Apache-2.0` | short report, every number re-checked against its source |
-| Skill | `review` | `train/val split in data/split.py, any leakage?` | `[Severity] RULE-ID path:line` findings → `Blocking: N Critical, M Major` |
-| Skill | `figure` | `low-level figure with tensor shapes for the neck and head` | hand-drawn HTML + PNG (SVG for papers), like the one above |
-
 ## Flows
-
-![Diagram of the develop flow (brief, explorer, architect, engineer x N, reviewer, report) and the research flow (brief, scout and shortlist, researcher x N, claim-verifier x N, lint, report.md)](docs/assets/overview.png)
-
-<sub>White boxes run on the main thread, blue agents only read, the purple engineer edits code test first, and the yellow notes say when a step runs.</sub>
 
 ### `/cv-kit:develop`
 
@@ -190,6 +163,31 @@ commit   when you ask ─► type(scope): description ─► git / svn commit
 
 The commit rule is `rules/commit-vcs.md` (Conventional Commits 1.0.0). `develop` reads it from the plugin; copied into
 `.claude/rules/`, it holds in every session.
+
+## Install
+
+```
+/plugin marketplace add lthphuw/cv-kit
+/plugin install cv-kit@cv-kit
+
+/plugin marketplace update cv-kit     # update
+/reload-plugins
+```
+
+Needs Claude Code ≥ 2.1.295 and `python3`. `figure` also needs Python ≥ 3.10 and Chrome or Chromium (`CHROME=` if not
+on PATH; not the snap build, it cannot read `/tmp`).
+
+## Skills
+
+Name a skill, or describe the work: "NMS crashes on empty input" loads `develop`.
+
+| Kind | Name | Example prompt | You get |
+|:-----|:-----|:---------------|:--------|
+| Skill | `develop` | `NMS in src/post/nms.cc crashes on zero detections` | failing test → fix → literal `ctest` output |
+| | | `set this repo up with strict ruff and mypy` | lint configs and `.claude/rules/` after your yes, existing files kept |
+| Skill | `research` | `which detector for 30 FPS on Orin NX, Apache-2.0` | short report, every number re-checked against its source |
+| Skill | `review` | `train/val split in data/split.py, any leakage?` | `[Severity] RULE-ID path:line` findings → `Blocking: N Critical, M Major` |
+| Skill | `figure` | `low-level figure with tensor shapes for the neck and head` | hand-drawn HTML + PNG (SVG for papers), like the one above |
 
 ## Agents
 
@@ -266,7 +264,9 @@ Lint configs tested with ruff 0.17.2, mypy 2.4.0, clang-format and clang-tidy 23
 - Progress, Summarization, Next: written by the model, which can skip one.
 - Catalogue rows marked `UNVERIFIED` are unchecked; licences change.
 - No training, benchmark harness or hardware measurement: you run those.
-- Cost: `architect` and the hard rows of `engineer` and `reviewer` run on Opus; the eval suite calls the API.
+- Cost: in the eval run a session with the plugin cost about twice one without. `architect` and the hard rows of
+  `engineer` and `reviewer` run on Opus, and a review of code with threads goes to the Opus reviewer.
+- The eval suite calls the API: a full two-sided run is 126 sessions.
 
 ## Development
 

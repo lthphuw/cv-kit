@@ -1,15 +1,16 @@
-// cv-kit overview: who does what in /cv-kit:develop and /cv-kit:research, and why.
+// cv-kit overview: who does what in the four skills (develop, research, review, figure), and why.
 // Sources: skills/develop/SKILL.md (flow, routing table, brief, what comes back), skills/research/SKILL.md
-// (pipeline), agents/*.md (model, effort and tools of each agent), scripts/lint_research.py (verdicts). Build:
+// (pipeline), skills/review/SKILL.md and its report-format.md, skills/figure/SKILL.md, agents/*.md (model, effort
+// and tools of each agent), scripts/lint_research.py (verdicts). Build:
 //   python3 skills/figure/scripts/build_figure.py docs/figures/cv-kit-overview.figure.js docs/figures/cv-kit-overview.html
-//   python3 skills/figure/scripts/check_figure.py docs/figures/cv-kit-overview.html --png docs/assets/overview.png --bare
+//   python3 skills/figure/scripts/check_figure.py docs/figures/cv-kit-overview.html --png docs/assets/overview.png
 // Blue boxes are agents that cannot edit your code, the purple box is the only agent that does, white boxes are
 // the main thread, green boxes are what you get, yellow notes say why.
 const FIGURE = {
   title: "cv-kit: one prompt, agents sized to the task",
   subtitle: "The skill scopes the work on the main thread and hands each step to the cheapest agent that can do it.",
   width: 1760,
-  height: 930,
+  height: 1220,
   draw(k) {
     const { card, panel, text, label, connect, box, left, note, pointer } = k;
     const W = 250, H = 140;
@@ -82,16 +83,36 @@ const FIGURE = {
     const differs = note(X(4) - 10, N2, 270, ["A differs is shown to you,", "never resolved silently."]);
     pointer([[lint.cx, differs.top], [lint.cx, lint.bottom]]);
 
+    // ---- /cv-kit:review and /cv-kit:figure ----
+    panel(30, 880, 1700, 260, "plain", "review and figure");
+    text(54, 916, "/cv-kit:review", 24, true, "start");
+    text(X(3) + 4, 916, "/cv-kit:figure", 24, true, "start");
+    const T3 = 950;
+    const scope = card(X(0), T3, W, "plain", "Scope",
+      ["paths, a diff, a branch", "or a pull request;", "installed linters run"], { h: H });
+    const second = card(X(1), T3, W, "plain", "reviewer",
+      ["sonnet, high, read-only", "opus for threads, memory,", "security, published numbers"], { h: H, style: READ });
+    const findings = card(X(2), T3, W, "store", "Findings",
+      ["severity, rule ID, path:line,", "What, Trigger, Fix,", "Blocking: n Critical, m Major"], { h: H });
+    chain([scope, second, findings]);
+    const facts = card(X(3), T3, W, "plain", "Read the code",
+      ["shapes, counts and names", "come from your code,", "never from memory"], { h: H });
+    const spec = card(X(4), T3, W, "plain", "Spec, build, check",
+      ["one .figure.js spec,", "built to one HTML file,", "layout checked in Chrome"], { h: H });
+    const drawn = card(X(5), T3, W, "store", "Figure",
+      ["hand-drawn HTML and PNG,", "SVG for papers,", "unconfirmed facts listed"], { h: H });
+    chain([facts, spec, drawn]);
+
     // ---- Legend ----
-    box(50, 880, 40, 26, "plain");
-    left(102, 898, "main thread", 20);
-    box(300, 880, 40, 26, "plain", "", READ);
-    left(352, 898, "agent, cannot edit your code", 20);
-    box(700, 880, 40, 26, "plain", "", EDIT);
-    left(752, 898, "agent, edits code test first", 20);
-    box(1090, 880, 40, 26, "store");
-    left(1142, 898, "what you get", 20);
-    box(1340, 880, 40, 26, "note");
-    left(1392, 898, "why", 20);
+    box(50, 1170, 40, 26, "plain");
+    left(102, 1188, "main thread", 20);
+    box(300, 1170, 40, 26, "plain", "", READ);
+    left(352, 1188, "agent, cannot edit your code", 20);
+    box(700, 1170, 40, 26, "plain", "", EDIT);
+    left(752, 1188, "agent, edits code test first", 20);
+    box(1090, 1170, 40, 26, "store");
+    left(1142, 1188, "what you get", 20);
+    box(1340, 1170, 40, 26, "note");
+    left(1392, 1188, "why", 20);
   }
 };
