@@ -1,7 +1,7 @@
 # Set up a project
 
 Use this when the user asks to set cv-kit up in a project, or when a step needs a linter config or test runner the
-project lacks. Each step changes what every later run reports, so show the plan first and wait for a yes. The scripts
+project lacks. Each step changes what every later run reports, so show the plan first and wait for a yes; the request to set the project up is not that yes. The scripts
 never overwrite a file that exists.
 
 1. **Rules.** A plugin cannot ship `.claude/rules`, so `develop` reads them from `${CLAUDE_SKILL_DIR}/../../rules/`.

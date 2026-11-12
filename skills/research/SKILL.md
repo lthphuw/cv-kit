@@ -1,6 +1,6 @@
 ---
 name: research
-description: Use when a model, method, library or claim must be chosen, compared or checked with evidence, such as picking a detector, segmenter, encoder or VLM for a task, budget and licence; SOTA or paper comparisons; embeddings and similarity search (how to compute, normalise and index CLIP/SigLIP/DINO features, FAISS); whether a README, paper or model-card number is right; or any R&D that needs papers and reference code downloaded and cross-checked.
+description: Use when a model, method, library or claim must be chosen, compared or checked with evidence, such as picking a detector, segmenter, encoder or VLM for a task, budget and licence; SOTA or paper comparisons; image embeddings and similarity search (how to compute, normalise and index CLIP/SigLIP/DINO features, FAISS); whether a README, paper or model-card number is right; or any R&D that needs papers and reference code downloaded and cross-checked.
 argument-hint: "[question, model, paper or claim]"
 allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/research_workspace.py *) Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/lint_research.py *)
 ---
@@ -17,9 +17,11 @@ Work in `research/<slug>/` in the user's project (`<slug>`: lowercase words and 
 repository you rely on, with the script, never by hand:
 
 ```
-python3 "${CLAUDE_SKILL_DIR}/../../scripts/research_workspace.py" init <slug>
-python3 "${CLAUDE_SKILL_DIR}/../../scripts/research_workspace.py" clone <slug> <git url> --ref <tag or sha>
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/research_workspace.py init <slug>
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/research_workspace.py clone <slug> <git url> --ref <tag or sha>
 ```
+
+Run each as its own Bash call, typed as above: a variable, `&&` or a pipe makes the permission rule miss.
 
 Papers and pages go in `sources/` (`curl -L -o`, not WebFetch, which returns a summary), clones in `repos/`
 (git-ignored; each clone's url and commit are in `evidence/repos.json`), and the rest in the folder:

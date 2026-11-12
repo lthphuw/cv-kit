@@ -1,6 +1,6 @@
 ---
 name: review
-description: Use when asked to review code, a diff, a branch, a pull request, a CV pipeline or an evaluation report (Python, C++ or Go, against the strict style catalogues, correctness, leakage and reproducibility), or to re-check the fixes from an earlier review. Not for making the fixes; that is develop.
+description: Use when asked to review code before a merge or a release (Python, C++ or Go), whether a pasted snippet, files, a diff, a branch, a pull request, a CV pipeline, a training or evaluation script, or an evaluation report. Load it before reading the code, however short the snippet. Reviews against the strict style catalogues and for correctness, data leakage and reproducibility, and re-checks the fixes from an earlier review. Not for making the fixes; that is develop.
 argument-hint: "[files, diff, branch or PR number]"
 allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project_facts.py *)
 ---
@@ -27,7 +27,8 @@ Facts read just now (a fact marked not found is not a finding):
    concurrency, memory safety, security or a number the user will publish, implements an `architect` design, or was
    written by an `opus` engineer). It has no shell, so paste the diff, or give the files with their changed line
    ranges, with the tool output and, for a designed change, the design's `Interfaces` and `Invariants`; never your
-   own findings. For a large change, split by directory and run the reviewers in one message.
+   own findings. A pasted snippet goes to the reviewer too: its checklist is not in this skill. For a large
+   change, split by directory and run the reviewers in one message.
 4. **Report** in the format of `${CLAUDE_SKILL_DIR}/references/report-format.md`, copied, not retold in prose. Each
    finding opens with the line `[Severity] RULE-ID path:line` and is followed by What, Trigger and Fix lines; a defect
    no catalogue rule covers opens `[Severity] no rule` and names the norm it rests on. Most severe first, then the
