@@ -103,7 +103,9 @@ the next start of its type, and the `agentId` that `PostToolUse` returns correct
 type start together. At `SessionStart`, `agent_rows.py --register` writes the plugin root to
 `~/.cache/cv-kit/agent-rows-root`, which the status line command reads, and deletes logs older than a day.
 
-A plugin cannot set `statusLine`, so add it to `~/.claude/settings.json` yourself:
+A plugin cannot set `statusLine`. `scripts/install_statusline.py` writes it for you (README, Install): it keeps a
+status line you already have, backs the file up, does nothing on a second run, and `--uninstall` puts the old line
+back. By hand, add this to `~/.claude/settings.json`:
 
 ```json
 {
@@ -131,4 +133,5 @@ Known gaps:
   to start wins.
 - An agent stopped from outside, for example from `/tasks`, may keep a running row: no hook reports it.
 - Hooks are off in an untrusted folder and under `disableAllHooks`, and then no rows appear.
-- Remove the `statusLine` entry before you uninstall cv-kit, or the status line goes blank.
+- Run `install_statusline.py --uninstall` before you uninstall cv-kit. If you forget, your own line still prints
+  and the rows part prints nothing.

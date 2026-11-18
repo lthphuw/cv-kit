@@ -22,6 +22,19 @@ A Claude Code plugin for computer-vision engineers who write Python, edge C++ an
 Needs Claude Code ≥ 2.1.295 and `python3`. `figure` also needs Python ≥ 3.10 and Chrome or Chromium (`CHROME=` if not
 on PATH; not the snap build, it cannot read `/tmp`).
 
+### Agent rows in the status line (optional)
+
+One row per agent in the status line: `◐ engineer (sonnet ▰▰▰▱▱)  clamp boxes  4m12s`. A plugin cannot set the status
+line, so after one session with cv-kit 0.10 or later, run this in a terminal, or after `!` in Claude Code:
+
+```
+python3 "$(cat ~/.cache/cv-kit/agent-rows-root)/scripts/install_statusline.py"
+```
+
+It adds the rows to `~/.claude/settings.json` and refreshes them once a second. A status line you already have stays
+and prints first, and the file is backed up to `settings.json.bak-cv-kit`. Before you uninstall cv-kit, run the same
+command with `--uninstall` to put your old line back. Details: `hooks/README.md`.
+
 ## Skills
 
 Name a skill, or describe the work: "NMS crashes on empty input" loads `develop`.
@@ -252,7 +265,7 @@ Details and known gaps: `hooks/README.md`.
 | Models | `model:` in `agents/*.md` | aliases `haiku` `sonnet` `opus`, or a full model ID to pin |
 | Concise mode, Progress, Next | `hooks/hooks.json` | remove the two `concise.py` entries to turn off |
 | Evidence ledger | `~/.cache/cv-kit/gate/` | move with `CV_KIT_GATE_DIR` |
-| Agent rows | `statusLine` in `~/.claude/settings.json` | a plugin cannot set it: copy the JSON from `hooks/README.md` |
+| Agent rows | `statusLine` in `~/.claude/settings.json` | `install_statusline.py` (see Install); `--uninstall` removes them |
 
 Lint configs tested with ruff 0.17.2, mypy 2.4.0, clang-format and clang-tidy 23.1.3, CMake 4.4, GCC 13.3.
 
@@ -261,7 +274,7 @@ Lint configs tested with ruff 0.17.2, mypy 2.4.0, clang-format and clang-tidy 23
 - Evidence gate: a nudge; it cannot tell whether the right tests ran.
 - Commit hook: gaps such as `--amend --no-edit` and `bash -c` (`hooks/README.md`).
 - Progress, Summarization, Next: written by the model, which can skip one.
-- Agent rows: you add the `statusLine` setting yourself; an agent stopped from `/tasks` may keep a running row.
+- Agent rows: need a one-time `install_statusline.py` run; an agent stopped from `/tasks` may keep a running row.
 - Catalogue rows marked `UNVERIFIED` are unchecked; licences change.
 - No training, benchmark harness or hardware measurement: you run those.
 - Cost: in the eval run a session with the plugin cost about twice one without. `architect` and the hard rows of
