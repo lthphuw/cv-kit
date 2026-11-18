@@ -1,7 +1,6 @@
 """scripts/install_statusline.py and the launcher it installs, on macOS, Linux and Windows."""
 import json
 import os
-import re
 import shlex
 import stat
 import subprocess
@@ -58,7 +57,7 @@ def test_no_status_line_gets_the_launcher_alone(tmp_path):
     command = f"/usr/bin/python3 {shlex.quote(str(launcher))} {shlex.quote(str(cfg))}"  # this OS's paths, sh quoting
     assert load(path) == {"model": "opus", "statusLine": {"type": "command", "command": command, "refreshInterval": 1}}
     assert launcher.read_bytes() == LAUNCHER.read_bytes()
-    assert config(path) == {"own": None, "shell": ["/bin/sh", "-c"], "ascii": False, "main": True, "before": None}
+    assert config(path) == {"own": None, "shell": ["/bin/sh", "-c"], "ascii": False, "before": None}
 
 
 def test_a_missing_settings_file_is_created(tmp_path):
@@ -128,10 +127,24 @@ def test_a_lost_config_falls_back_to_the_backup(tmp_path):
 
 def test_a_re_run_without_flags_keeps_the_earlier_choices(tmp_path):
     path = settings(tmp_path, {})
-    put(path, ascii=True, main=False)
-    assert put(path) == "already set" and config(path)["ascii"] is True and config(path)["main"] is False
+    put(path, ascii=True)
+    assert put(path) == "already set" and config(path)["ascii"] is True
     put(path, ascii=False)
-    assert config(path)["ascii"] is False and config(path)["main"] is False
+    assert config(path)["ascii"] is False
+
+
+def test_a_re_run_drops_the_main_choice_of_an_older_config(tmp_path):
+    path = settings(tmp_path, {})
+    put(path)
+    cfg = inst.config_path(path, tmp_path / "home")
+    cfg.write_text(json.dumps({**load(cfg), "main": False}), encoding="utf-8")  # written by --no-main in 0.11
+    assert put(path) == "updated" and "main" not in config(path)
+    assert put(path) == "already set"
+
+
+def test_the_installer_no_longer_takes_main_flags(tmp_path):
+    with pytest.raises(SystemExit):
+        main(["--settings", str(settings(tmp_path, {})), "--no-main"])
 
 
 def test_an_explicit_refresh_wins(tmp_path):
@@ -324,10 +337,6 @@ def home_with_rows(tmp_path: Path, cfg: dict | None, pointer: bool = True) -> Pa
     if pointer:
         (home / ".cache/cv-kit").mkdir(parents=True)
         (home / ".cache/cv-kit/agent-rows-root").write_text(str(ROOT), encoding="utf-8")
-    start = {"hook_event_name": "SubagentStart", "session_id": SID, "prompt_id": PROMPT, "agent_id": "a1",
-             "agent_type": "Explore"}
-    subprocess.run([PY, str(ROOT / "hooks/agent_rows.py"), "--event"], input=json.dumps(start).encode(),
-                   env=env_for(home), check=True, timeout=30)
     return home
 
 
@@ -340,22 +349,22 @@ def launch(home: Path, stdin: str = json.dumps(PAYLOAD), *args: str, **extra) ->
 MINE = "import sys, json; print('mine', json.load(sys.stdin)['session_id'])"
 
 
-def test_launcher_prints_the_users_line_then_the_rows(tmp_path):
-    home = home_with_rows(tmp_path, {"own": MINE, "shell": OWN, "ascii": False, "main": True})
+def test_launcher_prints_the_users_line_then_the_row(tmp_path):
+    home = home_with_rows(tmp_path, {"own": MINE, "shell": OWN, "ascii": False})
     result = launch(home, PYTHONIOENCODING="cp1252")
     lines = result.stdout.decode("utf-8").splitlines()
     assert result.returncode == 0 and lines[0] == f"mine {SID}"
-    assert lines[1].startswith("● main") and re.match("[◐◓◑◒] Explore", lines[2])
+    assert len(lines) == 2 and lines[1].startswith("● main")
 
 
-def test_launcher_without_config_prints_the_rows(tmp_path):
+def test_launcher_without_config_prints_the_row(tmp_path):
     lines = launch(home_with_rows(tmp_path, None)).stdout.decode("utf-8").splitlines()
-    assert lines[0].startswith("● main") and len(lines) == 2
+    assert lines[0].startswith("● main") and len(lines) == 1
 
 
-def test_launcher_honours_ascii_and_no_main(tmp_path):
+def test_launcher_honours_ascii_and_ignores_an_old_no_main(tmp_path):
     out = launch(home_with_rows(tmp_path, {"own": None, "shell": OWN, "ascii": True, "main": False})).stdout.decode()
-    assert out.isascii() and re.match(r"[|/\\-] Explore", out)
+    assert out.isascii() and out.startswith("* main ") and len(out.splitlines()) == 1
 
 
 def test_launcher_keeps_the_users_line_when_cv_kit_is_gone(tmp_path):
@@ -367,7 +376,7 @@ def test_launcher_keeps_the_users_line_when_cv_kit_is_gone(tmp_path):
     assert launch(home).stdout.decode().splitlines() == [f"mine {SID}"]
 
 
-def test_launcher_drops_a_failing_or_slow_own_line_and_still_draws_rows(tmp_path):
+def test_launcher_drops_a_failing_or_slow_own_line_and_still_draws_the_row(tmp_path):
     home = home_with_rows(tmp_path, {"own": "import sys; print('x'); sys.exit(3)", "shell": OWN})
     lines = launch(home).stdout.decode("utf-8").splitlines()
     assert lines[0].startswith("● main")  # Claude Code shows a failing command as nothing, so the launcher does too
@@ -386,10 +395,10 @@ def test_launcher_reads_the_config_it_is_given(tmp_path):
     other = home / ".claude/cv-kit/statusline-abc.json"
     other.write_text(json.dumps({"own": "print('other')", "shell": OWN, "main": False}), encoding="utf-8")
     lines = launch(home, json.dumps(PAYLOAD), str(other)).stdout.decode("utf-8").splitlines()
-    assert lines[0] == "other" and re.match("[◐◓◑◒] Explore", lines[1])
+    assert lines[0] == "other" and lines[1].startswith("● main")
 
 
-def test_launcher_still_draws_with_a_0_10_agent_rows(tmp_path):
+def test_launcher_still_draws_with_a_0_10_status_line_script(tmp_path):
     old_root = tmp_path / "old"
     (old_root / "hooks").mkdir(parents=True)
     (old_root / "hooks/agent_rows.py").write_text("def status_line(raw):\n    return ['old rows']\n", encoding="utf-8")

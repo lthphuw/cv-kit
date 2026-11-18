@@ -24,13 +24,11 @@ on PATH; not the snap build, it cannot read `/tmp`).
 
 ### Status line (optional)
 
-The main session and every agent on one grid: model, effort, context used, cost, what each agent is doing now, and
-how each one ended.
+One row for the main session: model, effort, context used, cost, lines changed and session time. Claude Code's own
+agent panel lists each subagent below it, so cv-kit draws no agent rows.
 
 ```
 ● main       opus   ▰▰▰▱▱  ctx ▰▰▰▱▱▱▱▱▱▱ 32% of 200k  $0.42  +156 −23                12m
-◐ engineer   sonnet ▰▰▰▱▱  tracker core: failing test  Bash pytest -q tests/…  1m40s  4m12s
-✓ explorer   haiku  ▰▱▱▱▱  frames reach the writer at pipeline.py:57                     17s
 ```
 
 A plugin cannot set the status line, so after one session with cv-kit 0.11 or later, run this once in a terminal,
@@ -61,8 +59,8 @@ Name a skill, or describe the work: "NMS crashes on empty input" loads `develop`
 
 ## What you see
 
-Both recordings are scripted examples, not measured results. The agent rows in them are drawn by the plugin's status
-line script, `hooks/agent_rows.py`, which you turn on with one command (see Install).
+Both recordings are scripted examples, not measured results. The last line in them is the main row, drawn by the
+plugin's status line script, `hooks/agent_rows.py`, which you turn on with one command (see Install).
 
 ### A develop run
 
@@ -146,9 +144,9 @@ cited without the word "unconfirmed", and `scripts/lint_research.py` fails the r
 
 ### Status line and progress
 
-With the status line on (see Install), each agent's row shows its task, the tool it runs now, and at the end its
-`STATUS` line: `◐` running, `✓` done, `!` blocked, `✗` failed. When an agent finishes while others still run you get
-a `Progress` line per agent; a finished task ends with `Summarization` and `Next`.
+With the status line on (see Install), the main row shows the model, context, cost and session time. When an agent
+finishes while others still run you get a `Progress` line per agent; a finished task ends with `Summarization` and
+`Next`.
 
 ## Flows
 
@@ -265,7 +263,7 @@ Draft one with `/cv-kit:develop write the /goal line for the NMS crash`. Templat
 | `concise.py` | session and agent start | short replies; the `Progress`, `Summarization` and `Next` blocks |
 | `block_trailers.py` | before each Bash call | refuses a commit that carries an AI trailer |
 | `evidence_gate.py` | after edits and Bash, at stop | code changed after the last green test: holds the turn, once |
-| `agent_rows.py` | Agent calls, agent start and stop, every tool (async) | logs each agent; the status line draws the grid |
+| `agent_rows.py` | session start | points the status line at the plugin and keeps its launcher current |
 
 Details and known gaps: `hooks/README.md`.
 
@@ -286,8 +284,7 @@ Lint configs tested with ruff 0.17.2, mypy 2.4.0, clang-format and clang-tidy 23
 - Evidence gate: a nudge; it cannot tell whether the right tests ran.
 - Commit hook: gaps such as `--amend --no-edit` and `bash -c` (`hooks/README.md`).
 - Progress, Summarization, Next: written by the model, which can skip one.
-- Status line: needs a one-time `install_statusline.py` run; a background agent stopped from `/tasks` may keep a
-  running row.
+- Status line: needs a one-time `install_statusline.py` run.
 - Catalogue rows marked `UNVERIFIED` are unchecked; licences change.
 - No training, benchmark harness or hardware measurement: you run those.
 - Cost: in the eval run a session with the plugin cost about twice one without. `architect` and the hard rows of

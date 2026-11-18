@@ -73,58 +73,34 @@ a failing test (the red step) is answered by saying so.
 
 `concise.md` tells every subagent to start its report with `STATUS: done|blocked|failed — <15 words max>`.
 `progress.md` is added at `SessionStart` only, so subagents pay no tokens for it: when a background agent finishes
-while others run, the main thread prints a `Progress (2/3 done):` block, with no clock, since the agent rows show the
-time. A finished task ends with `Summarization:` (at most 5 bullets) and `Next:` (at most 3 prompts to copy, such as
+while others run, the main thread prints a `Progress (2/3 done):` block, with no clock, since Claude Code's agent panel
+shows the time. A finished task ends with `Summarization:` (at most 5 bullets) and `Next:` (at most 3 prompts to copy, such as
 `/cv-kit:review the diff against main`). A plugin cannot steer Claude Code's own grey prompt suggestions, so `Next:`
-is plain text in the reply. There is no timer-based heartbeat: the blocks appear on events, and the agent rows cover
+is plain text in the reply. There is no timer-based heartbeat: the blocks appear on events, and the agent panel covers
 the time in between.
 
-## Agent rows in the status line
+## The status line
 
-Since Claude Code 2.1.323 a plugin cannot restyle the subagent rows under the prompt, and a status line command gets
-no subagent data. So the hooks collect it, and the status line draws the main session and every agent on one grid:
+The status line is one row for the main session:
 
 ```
-● main           opus   ▰▰▰▱▱  ctx ▰▰▰▱▱▱▱▱▱▱ 32% of 200k  $0.42  +156 −23                12m
-◐ engineer       sonnet ▰▰▰▱▱  tracker core: failing test  Bash pytest -q tests/…  1m40s  4m12s
-◓ researcher     sonnet ▰▰▰▱▱  RF-DETR: paper, model card  thinking…                        48s
-✓ explorer       haiku  ▰▱▱▱▱  frames reach the writer at pipeline.py:57                     17s
-! engineer       sonnet ▰▰▰▱▱  blocked: torch not installed in .venv                       1m02s
+● main           opus   ▰▰▰▱▱  ctx ▰▰▰▱▱▱▱▱▱▱ 32% of 200k  $0.42  +156 −23         12m
 ```
 
-The columns are icon, name, model, effort meter (`low` `▰▱▱▱▱` to `max` `▰▰▰▰▰`), task, activity, tool clock and time.
+The columns are icon, name, model, effort meter (`low` `▰▱▱▱▱` to `max` `▰▰▰▰▰`), context, cost and session time.
+Claude Code's own agent panel lists each subagent (task, time, tokens) below the status line, so cv-kit draws no
+agent rows. Versions up to 0.11 did, with hooks that logged agent events; those hooks are gone.
 
 - **main**: the session's model (`⚡` in fast mode) and effort; the context used, green below 50%, yellow to 80%,
   red above; the cost, the lines changed, and how long the session has run.
-- **A running agent**: `◐◓◑◒` turns each second. The task is the Agent call's description. The activity is its
-  current tool with the part worth seeing: the command for Bash, the file name for Read and Edit, the pattern for
-  Grep, the host for WebFetch. A tool that has run 10 seconds shows its own clock, so a long test run and a stuck
-  agent look different. Between tools it says `thinking…`.
-- **A finished agent**: the `STATUS:` line its report starts with (`concise.md` asks for one): `✓` done with the
-  summary, `!` blocked and `✗` failed in colour. Without a STATUS line the task stays. `■` is an agent left running
-  when the session was quit and resumed. Finished rows fade.
 
-Running rows come first, then the rows that finished under your current prompt; past 6 agents a `+N more` line
-counts the rest. A foreground agent from an earlier prompt is not shown: it was interrupted, and Esc runs no hook.
-The model is the one the Agent call named, else the `model:` of a cv-kit agent. When the terminal is narrow, parts
-go in this order: the tool clock, the activity and task narrow, the activity, the effort meter, the model, the task.
-The main row's cells shorten instead of cutting (`ctx 32%`, `$0.42`). `NO_COLOR=1` turns the colours off.
-
-### How the rows are collected
-
-`agent_rows.py --event` runs on `PreToolUse`, `PostToolUse` and `PostToolUseFailure` of the Agent tool and on
-`SubagentStart` and `SubagentStop`, and appends one line per event to `~/.cache/cv-kit/agents/<session_id>.jsonl`.
-The Agent call gives the type, description, model and effort; the start and stop give the clock, and the stop gives
-the STATUS line. A call pairs with the next start of its type under the same prompt, and the `agentId` that
-`PostToolUse` returns corrects the pair when two agents of one type start together; a call that failed or was
-refused before it started pairs with nothing.
-
-`agent_rows.py --activity` runs on every tool call with `async: true`, so it never delays a tool. It logs only calls
-made inside a subagent (they carry `agent_id`): the tool, its main argument, and its end. A `SubagentHandback`
-report counts as the STATUS line.
+When the terminal is narrow, parts go in this order: the lines changed, the context window size, the cost, the effort
+meter, the model, the context. The cells shorten instead of cutting (`ctx 32%`, `$0.42`). `NO_COLOR=1` turns the
+colours off.
 
 At `SessionStart`, `agent_rows.py --register` writes the plugin root to `~/.cache/cv-kit/agent-rows-root`, refreshes
-an installed launcher, deletes logs older than a day, and on a resume closes the agents the old process left running.
+an installed launcher, and deletes the agent logs and row memory that older versions left in `~/.cache/cv-kit`, once
+they are a day old.
 
 ### Turning it on, on macOS, Linux and Windows
 
@@ -137,35 +113,26 @@ missing. The Python is `python3` from PATH when it runs, else the one that ran t
 Each settings file gets its own config, `~/.claude/cv-kit/statusline-<id>.json`, so your user settings and a
 project's can each keep their own line. A status line you already have goes there with the shell it runs in, found
 again on every run of the installer (Git Bash may have come or gone). On each refresh the launcher runs it first
-with the same input, keeps its output when it exits 0 within 10 seconds, and then adds the rows. A command that runs
+with the same input, keeps its output when it exits 0 within 10 seconds, and then adds the row. A command that runs
 longer is killed (its whole process tree on Windows, where a child still holding the output would stall the
 refresh), and when Claude Code cancels a refresh the launcher takes your command with it. The launcher always exits
 0 and prints UTF-8, since Claude Code blanks the whole status line when the command fails: a missing cv-kit or a
 broken config never costs you your own line.
 
-A re-run keeps edits you made to the line since (`padding`, a `refreshInterval` you set) and your earlier `--ascii`
-and `--no-main`, unless you pass new ones. If the config is gone (a settings file synced without it), the backup
+A re-run keeps edits you made to the line since (`padding`, a `refreshInterval` you set) and your earlier `--ascii`,
+unless you pass a new one. A config written with the old `--no-main` is rewritten without it, and until then the
+launcher ignores it: the main row always shows. If the config is gone (a settings file synced without it), the backup
 taken before cv-kit first wrote the file gives your line back. `--uninstall` puts the old line back, and removes the
 launcher once no settings file uses it. The 0.10 shell form is migrated on the next run, keeping your other fields.
 
 Options: `--refresh N` (default 1 second; your own command then runs that often too), `--ascii` for a terminal
-without the glyphs (`|/-\`, `#`, `+`; `--no-ascii` undoes it), `--no-main` to leave out the main row (`--main`
-brings it back), `--settings PATH` for another file.
-
-Appends are whole lines: one write to an `O_APPEND` file on macOS and Linux, under a lock file on Windows, where
-appends from two processes can interleave.
+without the glyphs (`#` and `-` for the bars; `--no-ascii` undoes it), `--settings PATH` for another file.
 
 Known gaps:
 
-- Every tool call starts a short `python3` for `--activity`, in the background (`async`), so no tool waits for it,
-  but it costs some CPU, more on Windows, even before the status line is turned on. A plugin hook in exec form has
-  no cheaper filter for "a call inside a subagent".
-- A long session's log keeps growing; the status line parses only its latest 4,000 tool lines each second.
-
 - cv-kit's hooks run `python3`. On Windows the python.org installer makes only `python.exe`, so the installer warns
   when `python3` does not run: install Python from the Microsoft Store, or copy `python.exe` to `python3.exe`.
-- The rows need one session start with cv-kit 0.11 or later enabled, so the pointer file exists. The last session
+- The main row needs one session start with cv-kit 0.11 or later enabled, so the pointer file exists. The last session
   to start wins.
-- A background agent stopped from `/tasks` may keep a running row until the session is resumed: no hook reports
-  the stop.
-- Hooks are off in an untrusted folder and under `disableAllHooks`, and then no rows appear.
+- Hooks are off in an untrusted folder and under `disableAllHooks`, and then the pointer file is not written and the
+  main row does not appear.

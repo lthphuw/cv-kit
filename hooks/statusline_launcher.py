@@ -12,7 +12,7 @@ On each refresh it reads the status line JSON from stdin, then:
    (`shell`), with the same stdin, and keeps its output when it exits 0 within `timeout` seconds; past that it kills
    it (the whole tree on Windows, where a grandchild holding the pipe would stall the read) and moves on. When
    Claude Code cancels the launcher, SIGTERM takes the user's command with it;
-2. loads `hooks/agent_rows.py` from the plugin root in `~/.cache/cv-kit/agent-rows-root` and adds its rows.
+2. loads `hooks/agent_rows.py` from the plugin root in `~/.cache/cv-kit/agent-rows-root` and adds its row.
 
 It prints both as UTF-8 and always exits 0: Claude Code blanks the whole status line when the command fails, so a
 missing plugin or a broken config must never cost the user their own line. Standard library only.
@@ -89,8 +89,7 @@ def rows(config: dict, raw: bytes) -> list[str]:
         spec.loader.exec_module(module)
         text = raw.decode("utf-8", errors="replace")
         try:
-            return module.status_line(text, ascii=config.get("ascii") is True,
-                                      main=config.get("main", True) is not False)
+            return module.status_line(text, ascii=config.get("ascii") is True)  # an old "main" key is ignored
         except TypeError:  # the pointer names a 0.10 plugin root, whose status_line takes only the input
             return module.status_line(text)
     except Exception:

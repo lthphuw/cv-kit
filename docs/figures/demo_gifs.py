@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Build docs/assets/develop.gif and research.gif: scripted runs, with the agent rows drawn by hooks/agent_rows.py.
+"""Build docs/assets/develop.gif and research.gif: scripted runs, with the main row drawn by hooks/agent_rows.py.
 
     python3 docs/figures/demo_gifs.py [develop|research ...]
 
 Needs Chrome or Chromium (`CHROME=` if not on PATH) and ffmpeg. The transcript text is written here by hand and shows
-the shape of a run; the rows are what the status line prints for the same agents.
+the shape of a run; the last line is what the status line prints for the same session.
 """
 from __future__ import annotations
 
@@ -70,7 +70,7 @@ class Scene:
     def __init__(self, title: str, prompt: str):
         self.title, self.prompt = title, prompt
         self.lines: list[str] = []
-        self.tasks: list[dict] = []
+        self.running = 0  # agents in flight: they only raise the cost on the status line
         self.cost = 0.0
         self.now = 0.0
         self.frames: list[tuple[str, float]] = []
@@ -82,33 +82,23 @@ class Scene:
     def cut(self) -> None:
         self.lines = []
 
-    def start(self, agent: str, model: str, effort: str, label: str, doing: str = "") -> str:
-        """`doing` is the tool the agent is in, as `Tool argument`; empty means it is between tools."""
-        task_id = f"t{len(self.tasks)}"
-        tool, _, arg = doing.partition(" ")
-        self.tasks.append({"id": task_id, "type": f"cv-kit:{agent}", "label": label, "model": model, "effort": effort,
-                           "prompt": "demo", "start": self.now - 2000, "end": None,
-                           "activity": {"tool": tool, "arg": arg, "t": self.now - 1000, "done": False}
-                           if doing else None})
-        return task_id
+    def start(self, count: int = 1) -> None:
+        self.running += count
 
     def tick(self, count: int = 1, hold: float = 0.6) -> None:
         for _ in range(count):
             self.now += TICK_MS
-            self.cost += 0.02 * sum(task["end"] is None for task in self.tasks)
+            self.cost += 0.02 * self.running
             self.snap(hold)
 
-    def finish(self, *task_ids: str) -> None:
-        for task in self.tasks:
-            if task["id"] in task_ids:
-                task["end"] = self.now
-                task["outcome"], task["summary"] = "done", task.pop("result", "")
+    def finish(self, count: int = 1) -> None:
+        self.running -= count
 
     def snap(self, hold: float) -> None:
         main = {"model": {"id": "claude-opus-5-5"}, "effort": {"level": "high"},
                 "context_window": {"used_percentage": min(90, 12 + self.now / 4000), "context_window_size": 200_000},
                 "cost": {"total_cost_usd": 0.05 + self.cost, "total_duration_ms": self.now + 30_000}}
-        rows = agent_rows.render(self.tasks, "demo", self.now, columns=COLUMNS, main=main)
+        rows = agent_rows.render(main, columns=COLUMNS)
         body = [f'<span class="d">&gt;</span> <span class="p">{html.escape(self.prompt)}</span>']
         tail = [mark(line) for line in self.lines]
         if rows:
@@ -127,14 +117,14 @@ def develop() -> Scene:
           "  {d|Not doing}  re-identification across cameras",
           "  Go ahead?", hold=2.6)
     s.say("{d|>} {p|yes}", hold=0.9)
-    explorer = s.start("explorer", "haiku", "low", "where frames reach the writer", "Grep writer.write")
+    s.start()
     s.tick(3)
-    s.finish(explorer)
+    s.finish()
     s.cut()
     s.say("{b|●} Baseline: pytest -q, 41 passed. Frames reach the writer at pipeline.py:57.", hold=1.6)
-    architect = s.start("architect", "opus", "high", "design: tracker between detect and writer", "Read pipeline.py")
+    s.start()
     s.tick(5)
-    s.finish(architect)
+    s.finish()
     s.say("{b|●} Design: two packages share one interface, Track(id, box, score)",
           "  1  tracker core                vision/track.py",
           "  2  writer accepts track ids    io/writer.py",
@@ -142,23 +132,21 @@ def develop() -> Scene:
     s.say("{d|>} {p|yes}", hold=0.9)
     s.cut()
     s.say("{b|●} Design approved: two engineers in parallel, each in its own worktree", hold=0.8)
-    core = s.start("engineer", "sonnet", "high", "tracker core: failing test, then code",
-                   "Bash pytest -q tests/test_track.py")
-    writer = s.start("engineer", "sonnet", "high", "writer accepts track ids", "Edit io/writer.py")
+    s.start(2)
     s.tick(4)
-    s.finish(writer)
+    s.finish()
     s.say("",
           "  Progress (1/2 done):",
           "  - engineer#1 tracker core: running",
           "  - engineer#2 writer accepts track ids: {g|done}, 3 tests pass", hold=1.8)
     s.tick(2)
-    s.finish(core)
+    s.finish()
     s.tick(1, hold=0.9)
     s.cut()
     s.say("{b|●} Both packages green: reviewer reads the diff against the design", hold=0.8)
-    reviewer = s.start("reviewer", "opus", "high", "review against the design", "Read vision/track.py")
+    s.start()
     s.tick(4)
-    s.finish(reviewer)
+    s.finish()
     s.tick(1, hold=0.9)
     s.cut()
     s.say("{b|●} Nothing is committed.",
@@ -190,25 +178,22 @@ def research() -> Scene:
     s.say("{d|>} {p|yes}", hold=0.9)
     s.cut()
     s.say("{b|●} Deep-read: one researcher per candidate, sources saved to sources/", hold=0.8)
-    names = ("RF-DETR", "D-FINE", "RT-DETRv2")
-    readers = [s.start("researcher", "sonnet", "high", f"{name}: paper, model card, repo")
-               for name in names]
+    s.start(3)
     s.tick(4)
-    s.finish(readers[1])
+    s.finish()
     s.say("",
           "  Progress (1/3 done):",
           "  - researcher#1 RF-DETR: running",
           "  - researcher#2 D-FINE: {g|done}, 6 claims",
           "  - researcher#3 RT-DETRv2: running", hold=1.8)
     s.tick(2)
-    s.finish(readers[0], readers[2])
+    s.finish(2)
     s.tick(1, hold=0.9)
     s.cut()
     s.say("{b|●} Cross-check: verifiers re-read the sources without the claimed values", hold=0.8)
-    verifiers = [s.start("claim-verifier", "haiku", "medium", f"re-read {name} sources, blind")
-                 for name in names]
+    s.start(3)
     s.tick(3)
-    s.finish(*verifiers)
+    s.finish(3)
     s.tick(1, hold=0.9)
     s.cut()
     s.say("{b|●} Lint",

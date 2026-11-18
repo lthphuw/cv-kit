@@ -3,7 +3,7 @@
     macOS, Linux, Git Bash:  python3 "$(cat ~/.cache/cv-kit/agent-rows-root)/scripts/install_statusline.py"
     Windows PowerShell:      python "$(Get-Content ~/.cache/cv-kit/agent-rows-root)/scripts/install_statusline.py"
 
-    options: [--settings PATH] [--refresh SECONDS] [--ascii | --no-ascii] [--main | --no-main] [--uninstall]
+    options: [--settings PATH] [--refresh SECONDS] [--ascii | --no-ascii] [--uninstall]
 
 A plugin cannot set `statusLine`, so this writes it for the user (default `~/.claude/settings.json`). It copies
 hooks/statusline_launcher.py to `~/.claude/cv-kit/statusline.py` and sets the command to `<python> <launcher>
@@ -176,14 +176,13 @@ def refresh_of(line: dict | None) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else None
 
 
-def install(path: Path, refresh: int | None = None, ascii: bool | None = None, main: bool | None = None,
-            home: Path | None = None, system: str | None = None, python: str | None = None, env=None,
-            write_files: bool = True) -> str:
+def install(path: Path, refresh: int | None = None, ascii: bool | None = None, home: Path | None = None,
+            system: str | None = None, python: str | None = None, env=None, write_files: bool = True) -> str:
     """Write the status line into `path`.
 
-    None for `refresh`, `ascii` or `main` means no choice was made: a re-run keeps what is set, a new install uses
-    1 second, Unicode and the main row. A wrapped line is set to 1 second unless `refresh` says otherwise, since the
-    rows' clocks need it; README says to pass `--refresh` for a slow command."""
+    None for `refresh` or `ascii` means no choice was made: a re-run keeps what is set, a new install uses
+    1 second and Unicode. A wrapped line is set to 1 second unless `refresh` says otherwise, since the
+    row's clock needs it; README says to pass `--refresh` for a slow command."""
     home, system = home or HOME, system or platform.system()
     env = os.environ if env is None else env
     data = read(path)
@@ -199,7 +198,6 @@ def install(path: Path, refresh: int | None = None, ascii: bool | None = None, m
         old = saved_config(cfg, path)
         own, before, base, result = old.get("own"), old.get("before"), line, "updated"  # keep edits made since
         ascii = old.get("ascii", False) if ascii is None else ascii
-        main = old.get("main", True) if main is None else main
     else:
         legacy, inner = legacy_own(line["command"])
         if legacy:  # 0.10 set refreshInterval itself, so the user's own value is gone
@@ -209,7 +207,7 @@ def install(path: Path, refresh: int | None = None, ascii: bool | None = None, m
         else:
             own, before, base, result = line["command"], line, line, "wrapped"
     seconds = refresh or (refresh_of(base) if result == "updated" else None) or 1
-    config = {"own": own, "shell": shell, "ascii": bool(ascii), "main": main is not False, "before": before}
+    config = {"own": own, "shell": shell, "ascii": bool(ascii), "before": before}
     launcher = folder / "statusline.py"
     command = command_line([python or pick_python(), str(launcher), str(cfg)], system, shell)
     new_line = {**{k: v for k, v in base.items() if k not in ("type", "command", "refreshInterval")},
@@ -263,8 +261,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--refresh", type=int, help="seconds between refreshes (default: 1, or what is set)")
     parser.add_argument("--ascii", action=argparse.BooleanOptionalAction,
                         help="draw with ASCII only, for terminals without the glyphs (--no-ascii undoes it)")
-    parser.add_argument("--main", action=argparse.BooleanOptionalAction,
-                        help="the main session's row (default; --no-main leaves it out)")
     parser.add_argument("--uninstall", action="store_true", help="put the old status line back")
     args = parser.parse_args(argv)
     settings = args.settings or HOME / ".claude" / "settings.json"
@@ -275,13 +271,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.uninstall:
             result = uninstall(settings, home=HOME)
         else:
-            result = install(settings, refresh=args.refresh, ascii=args.ascii, main=args.main, home=HOME)
+            result = install(settings, refresh=args.refresh, ascii=args.ascii, home=HOME)
     except (OSError, ValueError) as error:
         print(error, file=sys.stderr)
         return 1
     print(f"{result}: {settings}")
     if not args.uninstall and not python3_works(shutil.which("python3")):
-        print("warning: `python3` does not run here, and cv-kit's hooks need it, so no agent rows will appear. On "
+        print("warning: `python3` does not run here, and cv-kit's hooks need it, so they will not run. On "
               "Windows, install Python from the Microsoft Store, or copy python.exe to python3.exe in the same folder.",
               file=sys.stderr)
     return 0
