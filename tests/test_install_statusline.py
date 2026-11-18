@@ -40,7 +40,7 @@ def test_an_existing_status_line_is_kept_and_runs_first(tmp_path):
     assert install(path) == "wrapped"
     line = load(path)["statusLine"]
     assert line["padding"] == 2 and line["refreshInterval"] == 1
-    assert line["command"] == "in=$(cat); printf '%s' \"$in\" | { echo 'mine'; }; printf '%s' \"$in\" | " + ROWS
+    assert line["command"] == "in=$(cat); printf '%s' \"$in\" | { echo 'mine'\n}; printf '%s' \"$in\" | " + ROWS
 
 
 def test_a_slower_refresh_of_the_users_own_is_lowered_and_a_faster_one_kept(tmp_path):
@@ -49,6 +49,26 @@ def test_a_slower_refresh_of_the_users_own_is_lowered_and_a_faster_one_kept(tmp_
     assert load(slow)["statusLine"]["refreshInterval"] == 1
     install(slow := settings(tmp_path, {"statusLine": {"type": "command", "command": "x"}}), refresh=5)
     assert load(slow)["statusLine"]["refreshInterval"] == 5
+
+
+@pytest.mark.parametrize("own", ["echo mine # my line", "echo mine &", "echo mine;"])
+def test_a_command_ending_in_a_comment_or_ampersand_still_runs(tmp_path, own):
+    path = settings(tmp_path, {"statusLine": {"type": "command", "command": own}})
+    install(path)
+    command = load(path)["statusLine"]["command"]
+    result = subprocess.run(["sh", "-c", command + "; wait"], input="{}", capture_output=True, text=True, timeout=20,
+                            env={**os.environ, "HOME": str(tmp_path)})
+    assert (result.returncode, result.stdout) == (0, "mine\n")
+
+
+def test_a_symlinked_settings_file_stays_a_link_and_keeps_its_mode(tmp_path):
+    real = settings(tmp_path, {"model": "opus"})
+    real.chmod(0o600)
+    link = tmp_path / "linked.json"
+    link.symlink_to(real)
+    install(link)
+    assert link.is_symlink() and load(real)["statusLine"]["command"] == ROWS
+    assert real.stat().st_mode & 0o777 == 0o600
 
 
 def test_running_it_twice_changes_nothing(tmp_path):

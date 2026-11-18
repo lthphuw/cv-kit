@@ -32,7 +32,8 @@ python3 "$(cat ~/.cache/cv-kit/agent-rows-root)/scripts/install_statusline.py"
 ```
 
 It adds the rows to `~/.claude/settings.json` and refreshes them once a second. A status line you already have stays
-and prints first, and the file is backed up to `settings.json.bak-cv-kit`. Before you uninstall cv-kit, run the same
+and prints first, and the file is backed up to `settings.json.bak-cv-kit`. Your command then also runs once a second;
+if it is slow, add `--refresh 5`. Before you uninstall cv-kit, run the same
 command with `--uninstall` to put your old line back. Details: `hooks/README.md`.
 
 ## Skills
@@ -274,7 +275,8 @@ Lint configs tested with ruff 0.17.2, mypy 2.4.0, clang-format and clang-tidy 23
 - Evidence gate: a nudge; it cannot tell whether the right tests ran.
 - Commit hook: gaps such as `--amend --no-edit` and `bash -c` (`hooks/README.md`).
 - Progress, Summarization, Next: written by the model, which can skip one.
-- Agent rows: need a one-time `install_statusline.py` run; an agent stopped from `/tasks` may keep a running row.
+- Agent rows: need a one-time `install_statusline.py` run; a background agent stopped from `/tasks` may keep a
+  running row.
 - Catalogue rows marked `UNVERIFIED` are unchecked; licences change.
 - No training, benchmark harness or hardware measurement: you run those.
 - Cost: in the eval run a session with the plugin cost about twice one without. `architect` and the hard rows of

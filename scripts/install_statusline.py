@@ -20,7 +20,8 @@ from pathlib import Path
 
 ROWS = 'python3 "$(cat "$HOME/.cache/cv-kit/agent-rows-root" 2>/dev/null)/hooks/agent_rows.py" 2>/dev/null || true'
 PREFIX = "in=$(cat); printf '%s' \"$in\" | { "
-MIDDLE = "; }; printf '%s' \"$in\" | "
+# A newline, not `; }`, closes the group, so a command ending in `#`, `&` or `;` still parses.
+MIDDLE = "\n}; printf '%s' \"$in\" | "
 DEFAULT = Path.home() / ".claude" / "settings.json"
 
 
@@ -41,9 +42,12 @@ def read(path: Path) -> dict:
 
 
 def write(path: Path, data: dict) -> None:
+    path = path.resolve()  # write through a symlink (dotfile managers), not over it
     path.parent.mkdir(parents=True, exist_ok=True)
     part = path.with_name(f"{path.name}.{os.getpid()}.tmp")
     part.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    if path.exists():
+        shutil.copymode(path, part)
     os.replace(part, path)
 
 
@@ -73,7 +77,7 @@ def install(path: Path, refresh: int = 1) -> str:
                               "refreshInterval": min(old, refresh) if isinstance(old, int) and old > 0 else refresh}
         result = "wrapped"
     if path.exists():
-        shutil.copyfile(path, backup_path(path))
+        shutil.copy2(path, backup_path(path))
     write(path, data)
     return result
 

@@ -24,9 +24,9 @@ def call(tu: str, kind: str = "cv-kit:engineer", desc: str = "clamp boxes", **ex
             "tool_use_id": tu, "tool_input": {"subagent_type": kind, "description": desc, "prompt": "...", **extra}}
 
 
-def link(tu: str, agent: str) -> dict:
+def link(tu: str, agent: str, status: str = "completed") -> dict:
     return {"hook_event_name": "PostToolUse", "session_id": SID, "tool_name": "Agent", "tool_use_id": tu,
-            "tool_input": {}, "tool_response": {"status": "async_launched", "agentId": agent}}
+            "tool_input": {}, "tool_response": {"status": status, "agentId": agent}}
 
 
 def fail(tu: str) -> dict:
@@ -34,9 +34,13 @@ def fail(tu: str) -> dict:
             "tool_input": {}, "error": "agent crashed"}
 
 
-def start(agent: str, kind: str = "cv-kit:engineer") -> dict:
-    return {"hook_event_name": "SubagentStart", "session_id": SID, "prompt_id": PROMPT, "agent_id": agent,
+def start(agent: str, kind: str = "cv-kit:engineer", prompt: str = PROMPT) -> dict:
+    return {"hook_event_name": "SubagentStart", "session_id": SID, "prompt_id": prompt, "agent_id": agent,
             "agent_type": kind}
+
+
+def resume() -> dict:
+    return {"hook_event_name": "SessionStart", "session_id": SID, "source": "resume"}
 
 
 def stop(agent: str, kind: str = "cv-kit:engineer") -> dict:
@@ -66,6 +70,8 @@ def test_each_event_appends_one_json_line(tmp_path):
     {**start("a1"), "session_id": "../escape"},
     {**start("a1"), "session_id": None},
     {"hook_event_name": "Stop", "session_id": SID},
+    {**call("tu1"), "tool_name": "Task"},
+    {**resume(), "source": "startup"},
 ])
 def test_other_events_write_nothing(tmp_path, payload):
     rows.log_event(payload, NOW, tmp_path)
@@ -89,7 +95,8 @@ def test_unreadable_lines_are_skipped(tmp_path):
 def test_a_call_and_its_start_make_one_running_agent(tmp_path):
     [agent] = logged(tmp_path, (call("tu1", model="opus", effort="high"), NOW), (start("a1"), NOW + 50))
     assert agent == {"id": "a1", "type": "cv-kit:engineer", "label": "clamp boxes", "model": "opus",
-                     "effort": "high", "prompt": PROMPT, "start": NOW + 50, "end": None, "failed": False}
+                     "effort": "high", "prompt": PROMPT, "start": NOW + 50, "end": None, "failed": False,
+                     "lost": False, "background": False}
 
 
 def test_stop_ends_the_agent(tmp_path):
@@ -106,6 +113,49 @@ def test_a_failure_does_not_rewrite_a_finished_agent(tmp_path):
     [agent] = logged(tmp_path, (call("tu1"), NOW), (start("a1"), NOW), (stop("a1"), NOW + 1000),
                      (fail("tu1"), NOW + 3000))
     assert agent["end"] == NOW + 1000 and not agent["failed"]
+
+
+def test_a_call_that_failed_before_starting_pairs_with_nothing(tmp_path):
+    first = call("tu1", desc="bad call")
+    second = {**call("tu2", desc="real"), "prompt_id": "p-2"}
+    [agent] = logged(tmp_path, (first, NOW), (fail("tu1"), NOW + 2), (second, NOW + 5),
+                     (start("a1", prompt="p-2"), NOW + 11))
+    assert (agent["label"], agent["end"], agent["failed"], agent["prompt"]) == ("real", None, False, "p-2")
+
+
+def test_a_call_that_never_started_does_not_pair_with_a_later_prompt(tmp_path):
+    denied = call("tu1", desc="denied")  # a refused permission fires no failure hook
+    [agent] = logged(tmp_path, (denied, NOW), ({**call("tu2", desc="real"), "prompt_id": "p-2"}, NOW + 5),
+                     (start("a1", prompt="p-2"), NOW + 11))
+    assert agent["label"] == "real"
+
+
+def test_a_session_resume_ends_the_agents_left_running(tmp_path):
+    rows.log_event(resume(), NOW, tmp_path)
+    agents = logged(tmp_path, (start("a1"), NOW), (start("a2"), NOW), (stop("a2"), NOW + 1000),
+                    (resume(), NOW + 5000), (start("a3"), NOW + 6000))
+    assert [(a["id"], a["end"], a["lost"]) for a in agents] == [("a1", NOW + 5000, True), ("a2", NOW + 1000, False),
+                                                                 ("a3", None, False)]
+
+
+def test_post_tool_use_at_launch_marks_a_background_agent(tmp_path):
+    [agent] = logged(tmp_path, (call("tu1"), NOW), (start("a1"), NOW), (link("tu1", "a1", "async_launched"), NOW))
+    assert agent["background"]
+
+
+def test_a_start_without_a_time_does_not_break_the_others(tmp_path):
+    path = tmp_path / f"{SID}.jsonl"
+    path.write_text('{"e": "call", "t": 5, "type": "x"}\n{"e": "start", "id": "A", "type": "x"}\n'
+                    '{"e": "start", "t": 9, "id": "B", "type": "x", "p": "p-1"}\n', encoding="utf-8")
+    agents = rows.fold(rows.read_events(path))
+    assert [a["id"] for a in agents] == ["A", "B"]
+    assert draw(agents)[0].startswith("◐ x")
+
+
+def test_an_agent_resumed_under_a_later_prompt_belongs_to_it(tmp_path):
+    [agent] = logged(tmp_path, (call("tu1"), NOW), (start("a1"), NOW), (stop("a1"), NOW + 1000),
+                     (start("a1", prompt="p-2"), NOW + 5000), (stop("a1"), NOW + 9000))
+    assert agent["prompt"] == "p-2"
 
 
 def test_a_resumed_agent_runs_again(tmp_path):
@@ -198,9 +248,23 @@ def test_a_cv_kit_agent_without_a_model_gets_its_frontmatter_model():
 
 
 def test_finished_rows_of_earlier_prompts_are_hidden_but_running_ones_stay():
-    agents = [agent(id="old-done", prompt="p-0", end=NOW - 1000), agent(id="old-running", prompt="p-0", label="bg"),
+    agents = [agent(id="old-done", prompt="p-0", end=NOW - 1000),
+              agent(id="old-running", prompt="p-0", label="bg", background=True),
               agent(id="new-done", label="now", end=NOW - 1000)]
     assert [line.split("  ")[1] for line in draw(agents)] == ["bg", "now"]
+
+
+def test_a_foreground_agent_of_an_earlier_prompt_counts_as_interrupted():
+    agents = [agent(id="fg", prompt="p-0", label="fg"), agent(id="bg", prompt="p-0", label="bg", background=True)]
+    assert [line.split("  ")[1] for line in draw(agents)] == ["bg"]
+
+
+def test_a_lost_agent_shows_a_square():
+    assert draw([agent(end=NOW - 200_000, lost=True)]) == ["■ engineer (sonnet ▰▰▱▱▱)  clamp boxes  52s"]
+
+
+def test_clip_drops_the_padding_before_the_ellipsis():
+    assert rows.clip([("ab", ""), ("    ", ""), ("cdef", "")], 7) == [("ab", ""), ("…", "")]
 
 
 def test_without_a_prompt_id_finished_rows_show_for_a_minute():
@@ -272,17 +336,23 @@ def test_the_status_line_prints_nothing_without_agents_or_input(tmp_path):
 
 
 def test_register_writes_the_plugin_root_and_drops_old_logs(tmp_path):
-    folder = tmp_path / ".cache/cv-kit/agents"
-    folder.mkdir(parents=True)
-    old, new = folder / "old.jsonl", folder / "new.jsonl"
-    old.write_text(""), new.write_text("")
+    folder, legacy = tmp_path / ".cache/cv-kit/agents", tmp_path / ".cache/cv-kit/rows"
+    folder.mkdir(parents=True), legacy.mkdir(parents=True)
+    old, new, older = folder / "old.jsonl", folder / "new.jsonl", legacy / "s.json"  # rows/ is 0.9.1's memory
+    old.write_text(""), new.write_text(""), older.write_text("{}")
     stale = time.time() - 2 * 86400
-    os.utime(old, (stale, stale))
+    os.utime(old, (stale, stale)), os.utime(older, (stale, stale))
     result = run(tmp_path, "--register", stdin='{"hook_event_name": "SessionStart"}')
     assert (result.returncode, result.stdout) == (0, "")
     assert (tmp_path / ".cache/cv-kit/agent-rows-root").read_text(encoding="utf-8") == str(ROOT)
     assert not (tmp_path / ".cache/cv-kit/plugin-root").exists()  # 0.9.1 and older write that one
-    assert sorted(p.name for p in folder.iterdir()) == ["new.jsonl"]
+    assert sorted(p.name for p in folder.iterdir()) == ["new.jsonl"] and not older.exists()
+
+
+def test_register_at_resume_logs_the_reset(tmp_path):
+    run(tmp_path, "--register", stdin=json.dumps(resume()))
+    lines = (tmp_path / f".cache/cv-kit/agents/{SID}.jsonl").read_text(encoding="utf-8").splitlines()
+    assert [json.loads(line)["e"] for line in lines] == ["reset"]
 
 
 # --- wiring and docs ---------------------------------------------------------------------------------------------

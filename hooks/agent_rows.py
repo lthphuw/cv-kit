@@ -4,16 +4,18 @@
 Claude Code sends a status line command no subagent data, so the plugin's hooks collect it (hooks/hooks.json):
 
 - `--event` runs on PreToolUse, PostToolUse and PostToolUseFailure of the Agent tool, SubagentStart and SubagentStop.
-  It appends one JSON
-  line per event to `~/.cache/cv-kit/agents/<session_id>.jsonl`. An append of one short line is atomic, so agents
-  that start together do not overwrite each other. The Agent call gives the type, description, model and effort; the
-  start and stop give the agent id and the clock. A call pairs with the next start of its type, and the `agentId` in
-  PostToolUse corrects the pair when two calls of one type ran together. A failed call ends its agent as failed.
+  It appends one JSON line per event to `~/.cache/cv-kit/agents/<session_id>.jsonl`. An append of one short line is
+  atomic, so agents that start together do not overwrite each other. The Agent call gives the type, description, model and effort; the
+  start and stop give the agent id and the clock. A call pairs with the next start of its type under the same
+  prompt, and the `agentId` in PostToolUse corrects the pair when two calls of one type ran together. A failed call
+  ends its agent as failed.
 - `--register` runs at SessionStart: it writes this plugin's root to `~/.cache/cv-kit/agent-rows-root`, so the
   user's `statusLine` command can find this script, and deletes logs older than a day. cv-kit 0.9.1 and older wrote
-  `plugin-root` to a root without this script, so the name differs.
+  `plugin-root` to a root without this script, so the name differs. On a resume it logs a reset: agents still
+  marked running died with the old process and show `■`.
 - With no flag, it is the status line: stdin is the status line JSON, stdout one row per agent. Running agents show
   first, then the agents that finished under the current prompt; past `MAX_ROWS` a `+N more` line counts the rest.
+  A foreground agent from an earlier prompt was interrupted (Esc runs no hook), so it is not shown.
 
 A plugin cannot set `statusLine`, so the user adds it (hooks/README.md). Standard library only; any error prints
 nothing and exits 0, so a hook never blocks and the status line stays as it was.
@@ -63,7 +65,7 @@ def short_id(value) -> str:
 def event_line(payload: dict, now_ms: float) -> dict | None:
     """The log line for one hook payload, or None when the event is not about a subagent."""
     name, prompt = payload.get("hook_event_name"), payload.get("prompt_id")
-    if name in ("PreToolUse", "PostToolUse", "PostToolUseFailure") and payload.get("tool_name") in ("Agent", "Task"):
+    if name in ("PreToolUse", "PostToolUse", "PostToolUseFailure") and payload.get("tool_name") == "Agent":
         tool_input = payload.get("tool_input") or {}
         if name == "PreToolUse":
             return {"e": "call", "t": now_ms, "tu": payload.get("tool_use_id"),
@@ -75,11 +77,16 @@ def event_line(payload: dict, now_ms: float) -> dict | None:
             return {"e": "fail", "t": now_ms, "tu": payload.get("tool_use_id")}
         response = payload.get("tool_response")
         agent = response.get("agentId") if isinstance(response, dict) else None
-        return {"e": "link", "t": now_ms, "tu": payload.get("tool_use_id"), "id": short_id(agent)} if agent else None
+        if not agent:
+            return None
+        return {"e": "link", "t": now_ms, "tu": payload.get("tool_use_id"), "id": short_id(agent),
+                "bg": response.get("status") == "async_launched"}  # PostToolUse at launch: a background agent
     if name in ("SubagentStart", "SubagentStop") and payload.get("agent_type") and payload.get("agent_id"):
         line = {"e": "start" if name == "SubagentStart" else "stop", "t": now_ms,
                 "id": short_id(payload["agent_id"]), "type": str(payload["agent_type"])}
         return {**line, "p": prompt} if name == "SubagentStart" else line
+    if name == "SessionStart" and payload.get("source") == "resume":  # a new process: no agent kept running
+        return {"e": "reset", "t": now_ms}
     return None
 
 
@@ -112,46 +119,57 @@ def read_events(path: Path) -> list[dict]:
 def fold(events: list[dict]) -> list[dict]:
     """One dict per agent, in the order they first started."""
     agents: dict[str, dict] = {}
+    first: dict[str, tuple[float, object]] = {}  # agent id -> time and prompt of its first start
     calls: list[dict] = []
     links: dict[str, str] = {}  # tool_use_id -> agent id
+    background: set[str] = set()
     failures: dict[str, float] = {}  # tool_use_id -> time
     for event in events:
-        kind, agent_id = event.get("e"), event.get("id")
+        kind, agent_id, at = event.get("e"), event.get("id"), event.get("t")
         if kind == "call":
             calls.append(event)
         elif kind == "link" and event.get("tu") and agent_id:
             links[event["tu"]] = agent_id
+            if event.get("bg"):
+                background.add(agent_id)
         elif kind == "fail" and event.get("tu"):
-            failures[event["tu"]] = event.get("t")
+            failures[event["tu"]] = at if isinstance(at, (int, float)) else 0
         elif kind == "start" and agent_id:
+            first.setdefault(agent_id, (at if isinstance(at, (int, float)) else 0, event.get("p")))
             agent = agents.setdefault(agent_id, {"id": agent_id, "type": event.get("type", ""), "label": "",
-                                                 "model": "", "effort": "", "prompt": event.get("p"),
-                                                 "start": event.get("t"), "end": None, "failed": False,
-                                                 "first": event.get("t")})
-            agent["start"], agent["end"] = event.get("t"), None  # a resumed agent runs again
+                                                 "model": "", "effort": "", "prompt": None, "start": at,
+                                                 "end": None, "failed": False, "lost": False, "background": False})
+            # a resumed agent runs again, under the prompt that resumed it
+            agent.update(start=at, end=None, lost=False, prompt=event.get("p") or agent["prompt"])
         elif kind == "stop" and agent_id in agents:
-            agents[agent_id]["end"] = event.get("t")
+            agents[agent_id]["end"] = at
+        elif kind == "reset":
+            for agent in agents.values():
+                if agent["end"] is None:
+                    agent["end"], agent["lost"] = at, True
     paired: dict[str, dict] = {}
     for call in calls:  # the agentId from PostToolUse is certain
         agent_id = links.get(call.get("tu"))
         if agent_id in agents and agent_id not in paired:
             paired[agent_id], call["used"] = call, True
-    for agent in agents.values():  # the rest pair in order, by type
-        if agent["id"] in paired:
+    for agent_id, agent in agents.items():  # the rest pair in order: same type, same prompt, started after the call
+        if agent_id in paired:
             continue
+        started, prompt = first[agent_id]
         for call in calls:
-            if not call.get("used") and call.get("type") == agent["type"] and call.get("t", 0) <= agent["first"]:
-                paired[agent["id"]], call["used"] = call, True
+            failed_before = failures.get(call.get("tu"), float("inf")) < started  # it never started an agent
+            same_prompt = not (prompt and call.get("p")) or call.get("p") == prompt
+            if (not call.get("used") and call.get("type") == agent["type"] and same_prompt and not failed_before
+                    and (call.get("t") or 0) <= started):
+                paired[agent_id], call["used"] = call, True
                 break
-    out = []
-    for agent in agents.values():
-        call = paired.get(agent.pop("first") and agent["id"]) or {}
-        agent.update(label=call.get("desc", ""), model=call.get("model", ""), effort=call.get("effort", ""))
-        agent["prompt"] = call.get("p") or agent["prompt"]
+    for agent_id, agent in agents.items():
+        call = paired.get(agent_id, {})
+        agent.update(label=call.get("desc", ""), model=call.get("model", ""), effort=call.get("effort", ""),
+                     background=agent_id in background, prompt=agent["prompt"] or call.get("p"))
         if agent["end"] is None and call.get("tu") in failures:
             agent["end"], agent["failed"] = failures[call["tu"]], True
-        out.append(agent)
-    return out
+    return list(agents.values())
 
 
 # --- drawing -----------------------------------------------------------------------------------------------------
@@ -176,7 +194,12 @@ def clip(cell: Cell, limit: int) -> Cell:
         kept = ""
         for ch in text:
             if used + char_width(ch) > limit - 1:
-                return out + [(kept.rstrip(), style), ("…", "")]
+                out.append((kept, style))
+                while out and not out[-1][0].strip():  # no padding left before the ellipsis
+                    out.pop()
+                if out:
+                    out[-1] = (out[-1][0].rstrip(), out[-1][1])
+                return out + [("…", "")]
             kept += ch
             used += char_width(ch)
         out.append((kept, style))
@@ -232,7 +255,7 @@ def cells(agent: dict, now_ms: float) -> dict[str, Cell]:
     if end is None:
         icon = (SPINNER[int(now_ms // 1000) % len(SPINNER)], RUNNING)
     else:
-        icon = ("✗", FAILED) if agent.get("failed") else ("✓", DONE)
+        icon = ("✗", FAILED) if agent.get("failed") else ("■", DIM) if agent.get("lost") else ("✓", DONE)
     row = {"icon": [icon], "name": clip([(name, BOLD)], NAME_MAX), "model": [(model, "")] if model else [],
            "meter": effort_meter(str(agent.get("effort") or "")), "label": [(label, "")] if label else [],
            "time": [(clock((now_ms if end is None else float(end)) - start), "")]}
@@ -273,7 +296,9 @@ def paint(cell: Cell, color: bool) -> str:
 
 
 def visible(agents: list[dict], prompt, now_ms: float) -> list[dict]:
-    running = [a for a in agents if a.get("end") is None]
+    # A foreground agent cannot outlive its prompt: one from an earlier prompt was interrupted, and Esc runs no hook.
+    running = [a for a in agents if a.get("end") is None
+               and (a.get("background") or not prompt or a.get("prompt") in (None, prompt))]
     if prompt:
         done = [a for a in agents if a.get("end") is not None and a.get("prompt") == prompt]
     else:
@@ -322,15 +347,16 @@ def register() -> None:
     except OSError:
         pass
     cutoff = time.time() - LOG_TTL
-    try:
-        for path in (CACHE / "agents").iterdir():
-            try:
-                if path.stat().st_mtime < cutoff:
-                    path.unlink()
-            except OSError:
-                continue
-    except OSError:
-        pass
+    for folder in (CACHE / "agents", CACHE / "rows"):  # rows/ is the row memory of cv-kit 0.9.1 and older
+        try:
+            for path in folder.iterdir():
+                try:
+                    if path.stat().st_mtime < cutoff:
+                        path.unlink()
+                except OSError:
+                    continue
+        except OSError:
+            pass
 
 
 def status_line(raw: str) -> list[str]:
@@ -350,6 +376,7 @@ def main(argv: list[str]) -> int:
     try:
         if "--register" in argv:
             register()
+            log_event(json.loads(sys.stdin.read() or "{}"), time.time() * 1000, CACHE / "agents")
         elif "--event" in argv:
             log_event(json.loads(sys.stdin.read()), time.time() * 1000, CACHE / "agents")
         else:

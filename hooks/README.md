@@ -91,7 +91,8 @@ no subagent data. So the hooks collect it and your status line draws it, one row
 
 Icon, agent, model and effort meter (`low` `▰▱▱▱▱` to `max` `▰▰▰▰▰`), the task description, and the time: elapsed
 while it runs, the duration once done. `◐◓◑◒` turns on each refresh while the agent runs, `✓` is done, `✗` is a
-failed Agent call; done rows fade, failed rows stay bright. Running rows come first, then the rows that finished
+failed Agent call, `■` is an agent left running when the session was quit and resumed; done rows fade, failed rows
+stay bright. A foreground agent from an earlier prompt is not shown: it was interrupted, and Esc runs no hook. Running rows come first, then the rows that finished
 under your current prompt; past 6 rows a `+N more` line counts the rest. The model is the one the Agent call named,
 else the `model:` of a cv-kit agent. A narrow terminal cuts the description first, then the effort meter, then the
 model. `NO_COLOR=1` turns the colours off.
@@ -99,8 +100,8 @@ model. `NO_COLOR=1` turns the colours off.
 `agent_rows.py --event` runs on `PreToolUse`, `PostToolUse` and `PostToolUseFailure` of the Agent tool and on
 `SubagentStart` and `SubagentStop`, and appends one line per event to `~/.cache/cv-kit/agents/<session_id>.jsonl`.
 The Agent call gives the type, description, model and effort; the start and stop give the clock. A call pairs with
-the next start of its type, and the `agentId` that `PostToolUse` returns corrects the pair when two agents of one
-type start together. At `SessionStart`, `agent_rows.py --register` writes the plugin root to
+the next start of its type under the same prompt, and the `agentId` that `PostToolUse` returns corrects the pair
+when two agents of one type start together; a call that failed or was refused before it started pairs with nothing. At `SessionStart`, `agent_rows.py --register` writes the plugin root to
 `~/.cache/cv-kit/agent-rows-root`, which the status line command reads, and deletes logs older than a day.
 
 A plugin cannot set `statusLine`. `scripts/install_statusline.py` writes it for you (README, Install): it keeps a
@@ -119,19 +120,22 @@ back. By hand, add this to `~/.claude/settings.json`:
 
 `refreshInterval` keeps the clocks moving while the main thread waits on background agents; the script reads one
 small file, so once a second is cheap. If you already have a status line, keep it: put its command in place of
-`YOUR_COMMAND` and use the result as `command` (escape the quotes for JSON). Both get the same input, your line
+`YOUR_COMMAND` and use the result as `command` (escape the quotes and the newline for JSON; the newline lets a
+command that ends in `#` or `&` still parse). Both get the same input, your line
 prints first, and it still prints when cv-kit is not there: `|| true` matters, since a status line that exits
 non-zero goes blank. Your command then also runs every second.
 
 ```sh
-in=$(cat); printf '%s' "$in" | { YOUR_COMMAND; }; printf '%s' "$in" | python3 "$(cat "$HOME/.cache/cv-kit/agent-rows-root" 2>/dev/null)/hooks/agent_rows.py" 2>/dev/null || true
+in=$(cat); printf '%s' "$in" | { YOUR_COMMAND
+}; printf '%s' "$in" | python3 "$(cat "$HOME/.cache/cv-kit/agent-rows-root" 2>/dev/null)/hooks/agent_rows.py" 2>/dev/null || true
 ```
 
 Known gaps:
 
 - The rows need one session start with cv-kit 0.10 or later enabled, so the pointer file exists. The last session
   to start wins.
-- An agent stopped from outside, for example from `/tasks`, may keep a running row: no hook reports it.
+- A background agent stopped from `/tasks` may keep a running row until the session is resumed: no hook reports
+  the stop.
 - Hooks are off in an untrusted folder and under `disableAllHooks`, and then no rows appear.
 - Run `install_statusline.py --uninstall` before you uninstall cv-kit. If you forget, your own line still prints
   and the rows part prints nothing.
