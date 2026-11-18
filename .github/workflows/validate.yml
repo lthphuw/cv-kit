@@ -5,6 +5,20 @@ on:
   pull_request:
 
 jobs:
+  # The status line runs on the user's machine, so its tests run on every OS a user may have.
+  statusline:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest tests/test_agent_rows.py tests/test_install_statusline.py -q
   validate:
     runs-on: ubuntu-latest
     steps:

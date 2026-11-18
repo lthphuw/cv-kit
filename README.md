@@ -22,19 +22,30 @@ A Claude Code plugin for computer-vision engineers who write Python, edge C++ an
 Needs Claude Code ≥ 2.1.295 and `python3`. `figure` also needs Python ≥ 3.10 and Chrome or Chromium (`CHROME=` if not
 on PATH; not the snap build, it cannot read `/tmp`).
 
-### Agent rows in the status line (optional)
+### Status line (optional)
 
-One row per agent in the status line: `◐ engineer (sonnet ▰▰▰▱▱)  clamp boxes  4m12s`. A plugin cannot set the status
-line, so after one session with cv-kit 0.10 or later, run this in a terminal, or after `!` in Claude Code:
+The main session and every agent on one grid: model, effort, context used, cost, what each agent is doing now, and
+how each one ended.
 
 ```
+● main       opus   ▰▰▰▱▱  ctx ▰▰▰▱▱▱▱▱▱▱ 32% of 200k  $0.42  +156 −23                12m
+◐ engineer   sonnet ▰▰▰▱▱  tracker core: failing test  Bash pytest -q tests/…  1m40s  4m12s
+✓ explorer   haiku  ▰▱▱▱▱  frames reach the writer at pipeline.py:57                     17s
+```
+
+A plugin cannot set the status line, so after one session with cv-kit 0.11 or later, run this once in a terminal,
+or after `!` in Claude Code:
+
+```
+# macOS, Linux, Git Bash
 python3 "$(cat ~/.cache/cv-kit/agent-rows-root)/scripts/install_statusline.py"
+# Windows PowerShell
+python "$(Get-Content ~/.cache/cv-kit/agent-rows-root)/scripts/install_statusline.py"
 ```
 
-It adds the rows to `~/.claude/settings.json` and refreshes them once a second. A status line you already have stays
-and prints first, and the file is backed up to `settings.json.bak-cv-kit`. Your command then also runs once a second;
-if it is slow, add `--refresh 5`. Before you uninstall cv-kit, run the same
-command with `--uninstall` to put your old line back. Details: `hooks/README.md`.
+It keeps a status line you already have (yours prints first), backs `~/.claude/settings.json` up to
+`settings.json.bak-cv-kit`, and refreshes once a second; add `--refresh 5` if your own command is slow, `--ascii` if
+your terminal lacks the glyphs. Before you uninstall cv-kit, run it with `--uninstall`. Details: `hooks/README.md`.
 
 ## Skills
 
@@ -51,7 +62,7 @@ Name a skill, or describe the work: "NMS crashes on empty input" loads `develop`
 ## What you see
 
 Both recordings are scripted examples, not measured results. The agent rows in them are drawn by the plugin's status
-line script, `hooks/agent_rows.py`, which you turn on with one setting (see Configuration).
+line script, `hooks/agent_rows.py`, which you turn on with one command (see Install).
 
 ### A develop run
 
@@ -133,11 +144,11 @@ A real report carries the numbers, each with the tag of its claim in `claims.jso
 A claim's verdict is `confirmed`, `differs`, `wrong-paper`, `absent` or `unreachable`. Only a `confirmed` claim is
 cited without the word "unconfirmed", and `scripts/lint_research.py` fails the report otherwise.
 
-### Agent rows and progress
+### Status line and progress
 
-With the `statusLine` setting from `hooks/README.md`, the status line shows one row per agent:
-`icon agent (model effort) task time`, with `◐` running, `✓` done, `✗` failed. When an agent finishes while others
-still run you get a `Progress` line per agent; a finished task ends with `Summarization` and `Next`.
+With the status line on (see Install), each agent's row shows its task, the tool it runs now, and at the end its
+`STATUS` line: `◐` running, `✓` done, `!` blocked, `✗` failed. When an agent finishes while others still run you get
+a `Progress` line per agent; a finished task ends with `Summarization` and `Next`.
 
 ## Flows
 
@@ -254,7 +265,7 @@ Draft one with `/cv-kit:develop write the /goal line for the NMS crash`. Templat
 | `concise.py` | session and agent start | short replies; the `Progress`, `Summarization` and `Next` blocks |
 | `block_trailers.py` | before each Bash call | refuses a commit that carries an AI trailer |
 | `evidence_gate.py` | after edits and Bash, at stop | code changed after the last green test: holds the turn, once |
-| `agent_rows.py` | Agent calls, agent start and stop | logs each agent; your `statusLine` draws one row per agent |
+| `agent_rows.py` | Agent calls, agent start and stop, every tool (async) | logs each agent; the status line draws the grid |
 
 Details and known gaps: `hooks/README.md`.
 
@@ -266,7 +277,7 @@ Details and known gaps: `hooks/README.md`.
 | Models | `model:` in `agents/*.md` | aliases `haiku` `sonnet` `opus`, or a full model ID to pin |
 | Concise mode, Progress, Next | `hooks/hooks.json` | remove the two `concise.py` entries to turn off |
 | Evidence ledger | `~/.cache/cv-kit/gate/` | move with `CV_KIT_GATE_DIR` |
-| Agent rows | `statusLine` in `~/.claude/settings.json` | `install_statusline.py` (see Install); `--uninstall` removes them |
+| Status line | `statusLine` in `~/.claude/settings.json` | `install_statusline.py` (see Install); `--uninstall` removes it |
 
 Lint configs tested with ruff 0.17.2, mypy 2.4.0, clang-format and clang-tidy 23.1.3, CMake 4.4, GCC 13.3.
 
@@ -275,7 +286,7 @@ Lint configs tested with ruff 0.17.2, mypy 2.4.0, clang-format and clang-tidy 23
 - Evidence gate: a nudge; it cannot tell whether the right tests ran.
 - Commit hook: gaps such as `--amend --no-edit` and `bash -c` (`hooks/README.md`).
 - Progress, Summarization, Next: written by the model, which can skip one.
-- Agent rows: need a one-time `install_statusline.py` run; a background agent stopped from `/tasks` may keep a
+- Status line: needs a one-time `install_statusline.py` run; a background agent stopped from `/tasks` may keep a
   running row.
 - Catalogue rows marked `UNVERIFIED` are unchecked; licences change.
 - No training, benchmark harness or hardware measurement: you run those.

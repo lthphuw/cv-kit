@@ -71,6 +71,7 @@ class Scene:
         self.title, self.prompt = title, prompt
         self.lines: list[str] = []
         self.tasks: list[dict] = []
+        self.cost = 0.0
         self.now = 0.0
         self.frames: list[tuple[str, float]] = []
 
@@ -81,24 +82,33 @@ class Scene:
     def cut(self) -> None:
         self.lines = []
 
-    def start(self, agent: str, model: str, effort: str, label: str) -> str:
+    def start(self, agent: str, model: str, effort: str, label: str, doing: str = "") -> str:
+        """`doing` is the tool the agent is in, as `Tool argument`; empty means it is between tools."""
         task_id = f"t{len(self.tasks)}"
+        tool, _, arg = doing.partition(" ")
         self.tasks.append({"id": task_id, "type": f"cv-kit:{agent}", "label": label, "model": model, "effort": effort,
-                           "prompt": "demo", "start": self.now - 2000, "end": None})
+                           "prompt": "demo", "start": self.now - 2000, "end": None,
+                           "activity": {"tool": tool, "arg": arg, "t": self.now - 1000, "done": False}
+                           if doing else None})
         return task_id
 
     def tick(self, count: int = 1, hold: float = 0.6) -> None:
         for _ in range(count):
             self.now += TICK_MS
+            self.cost += 0.02 * sum(task["end"] is None for task in self.tasks)
             self.snap(hold)
 
     def finish(self, *task_ids: str) -> None:
         for task in self.tasks:
             if task["id"] in task_ids:
                 task["end"] = self.now
+                task["outcome"], task["summary"] = "done", task.pop("result", "")
 
     def snap(self, hold: float) -> None:
-        rows = agent_rows.render(self.tasks, "demo", self.now, columns=COLUMNS)
+        main = {"model": {"id": "claude-opus-5-5"}, "effort": {"level": "high"},
+                "context_window": {"used_percentage": min(90, 12 + self.now / 4000), "context_window_size": 200_000},
+                "cost": {"total_cost_usd": 0.05 + self.cost, "total_duration_ms": self.now + 30_000}}
+        rows = agent_rows.render(self.tasks, "demo", self.now, columns=COLUMNS, main=main)
         body = [f'<span class="d">&gt;</span> <span class="p">{html.escape(self.prompt)}</span>']
         tail = [mark(line) for line in self.lines]
         if rows:
@@ -117,12 +127,12 @@ def develop() -> Scene:
           "  {d|Not doing}  re-identification across cameras",
           "  Go ahead?", hold=2.6)
     s.say("{d|>} {p|yes}", hold=0.9)
-    explorer = s.start("explorer", "haiku", "low", "where frames reach the writer")
+    explorer = s.start("explorer", "haiku", "low", "where frames reach the writer", "Grep writer.write")
     s.tick(3)
     s.finish(explorer)
     s.cut()
     s.say("{b|●} Baseline: pytest -q, 41 passed. Frames reach the writer at pipeline.py:57.", hold=1.6)
-    architect = s.start("architect", "opus", "high", "design: tracker between detect and writer")
+    architect = s.start("architect", "opus", "high", "design: tracker between detect and writer", "Read pipeline.py")
     s.tick(5)
     s.finish(architect)
     s.say("{b|●} Design: two packages share one interface, Track(id, box, score)",
@@ -132,8 +142,9 @@ def develop() -> Scene:
     s.say("{d|>} {p|yes}", hold=0.9)
     s.cut()
     s.say("{b|●} Design approved: two engineers in parallel, each in its own worktree", hold=0.8)
-    core = s.start("engineer", "sonnet", "high", "tracker core: failing test, then code")
-    writer = s.start("engineer", "sonnet", "high", "writer accepts track ids")
+    core = s.start("engineer", "sonnet", "high", "tracker core: failing test, then code",
+                   "Bash pytest -q tests/test_track.py")
+    writer = s.start("engineer", "sonnet", "high", "writer accepts track ids", "Edit io/writer.py")
     s.tick(4)
     s.finish(writer)
     s.say("",
@@ -145,7 +156,7 @@ def develop() -> Scene:
     s.tick(1, hold=0.9)
     s.cut()
     s.say("{b|●} Both packages green: reviewer reads the diff against the design", hold=0.8)
-    reviewer = s.start("reviewer", "opus", "high", "review against the design")
+    reviewer = s.start("reviewer", "opus", "high", "review against the design", "Read vision/track.py")
     s.tick(4)
     s.finish(reviewer)
     s.tick(1, hold=0.9)

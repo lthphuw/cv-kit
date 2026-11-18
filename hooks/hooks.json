@@ -69,6 +69,19 @@
             ]
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/agent_rows.py",
+              "--activity"
+            ],
+            "async": true
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -108,6 +121,19 @@
             ]
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/agent_rows.py",
+              "--activity"
+            ],
+            "async": true
+          }
+        ]
       }
     ],
     "PostToolUseFailure": [
@@ -133,6 +159,19 @@
               "${CLAUDE_PLUGIN_ROOT}/hooks/agent_rows.py",
               "--event"
             ]
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/agent_rows.py",
+              "--activity"
+            ],
+            "async": true
           }
         ]
       }
