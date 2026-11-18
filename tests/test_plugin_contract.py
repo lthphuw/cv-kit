@@ -133,6 +133,26 @@ class TestHooks:
                     assert h["command"] == "python3" and "onFailure" not in h
 
 
+class TestNoStatusLine:
+    """Claude Code 2.1.323 removed `subagentStatusLine` and deprecated a plugin's `agent` setting."""
+
+    SHIPPED = sorted(p for pattern in ("*.md", "hooks/*", "skills/**/*.md", "agents/*.md", "shared/*.md",
+                                       "docs/figures/*.py") for p in ROOT.glob(pattern) if p.is_file())
+
+    def test_the_plugin_ships_no_settings_json(self):
+        assert not (ROOT / "settings.json").exists()
+
+    def test_no_hook_runs_the_status_line_script(self):
+        assert "agent_status" not in (ROOT / "hooks/hooks.json").read_text(encoding="utf-8")
+        assert not (ROOT / "hooks/agent_status.py").exists()
+
+    @pytest.mark.parametrize("path", SHIPPED, ids=lambda p: str(p.relative_to(ROOT)))
+    def test_nothing_mentions_the_removed_setting(self, path):
+        text = path.read_text(encoding="utf-8")
+        for needle in ("subagentStatusLine", "agent_status"):
+            assert needle not in text, f"{path}: {needle}"
+
+
 class TestAgents:
     def test_the_roster_has_no_agent_whose_job_a_skill_already_does(self):
         """`lead` repeated the routing in `develop`; the main thread routes from the skill instead."""

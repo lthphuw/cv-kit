@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""Build docs/assets/develop.gif and research.gif: scripted runs, with the agent rows drawn by hooks/agent_status.py.
+"""Build docs/assets/develop.gif and research.gif: scripted runs, with the agent rows drawn by hooks/agent_rows.py.
 
     python3 docs/figures/demo_gifs.py [develop|research ...]
 
 Needs Chrome or Chromium (`CHROME=` if not on PATH) and ffmpeg. The transcript text is written here by hand and shows
-the shape of a run; the rows are what the status line prints for the same tasks.
+the shape of a run; the rows are what the status line prints for the same agents.
 """
 from __future__ import annotations
 
 import html
-import json
 import os
 import re
 import shutil
@@ -21,7 +20,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "hooks"))
-import agent_status  # noqa: E402
+import agent_rows  # noqa: E402
 
 WIDTH, LINES, LINE_PX, COLUMNS = 880, 16, 22, 94
 HEIGHT = 30 + 32 + LINES * LINE_PX
@@ -72,8 +71,6 @@ class Scene:
         self.title, self.prompt = title, prompt
         self.lines: list[str] = []
         self.tasks: list[dict] = []
-        self.rates: dict[str, int] = {}
-        self.memory: dict = {}
         self.now = 0.0
         self.frames: list[tuple[str, float]] = []
 
@@ -84,29 +81,24 @@ class Scene:
     def cut(self) -> None:
         self.lines = []
 
-    def start(self, agent: str, model: str, effort: str, label: str, rate: int) -> str:
+    def start(self, agent: str, model: str, effort: str, label: str) -> str:
         task_id = f"t{len(self.tasks)}"
-        self.tasks.append({"id": task_id, "status": "running", "agentType": f"cv-kit:{agent}", "label": label,
-                           "model": model, "effort": effort, "tokenCount": rate // 3, "startTime": self.now - 2000})
-        self.rates[task_id] = rate
+        self.tasks.append({"id": task_id, "type": f"cv-kit:{agent}", "label": label, "model": model, "effort": effort,
+                           "prompt": "demo", "start": self.now - 2000, "end": None})
         return task_id
 
     def tick(self, count: int = 1, hold: float = 0.6) -> None:
         for _ in range(count):
             self.now += TICK_MS
-            for task in self.tasks:
-                if task["status"] == "running":
-                    task["tokenCount"] += self.rates[task["id"]]
             self.snap(hold)
 
     def finish(self, *task_ids: str) -> None:
         for task in self.tasks:
             if task["id"] in task_ids:
-                task["status"] = "completed"
+                task["end"] = self.now
 
     def snap(self, hold: float) -> None:
-        rows = [json.loads(line)["content"] for line in
-                agent_status.render({"columns": COLUMNS, "tasks": self.tasks}, self.now, memory=self.memory)]
+        rows = agent_rows.render(self.tasks, "demo", self.now, columns=COLUMNS)
         body = [f'<span class="d">&gt;</span> <span class="p">{html.escape(self.prompt)}</span>']
         tail = [mark(line) for line in self.lines]
         if rows:
@@ -125,12 +117,12 @@ def develop() -> Scene:
           "  {d|Not doing}  re-identification across cameras",
           "  Go ahead?", hold=2.6)
     s.say("{d|>} {p|yes}", hold=0.9)
-    explorer = s.start("explorer", "haiku", "low", "where frames reach the writer", 2100)
+    explorer = s.start("explorer", "haiku", "low", "where frames reach the writer")
     s.tick(3)
     s.finish(explorer)
     s.cut()
     s.say("{b|●} Baseline: pytest -q, 41 passed. Frames reach the writer at pipeline.py:57.", hold=1.6)
-    architect = s.start("architect", "opus", "high", "design: tracker between detect and writer", 3400)
+    architect = s.start("architect", "opus", "high", "design: tracker between detect and writer")
     s.tick(5)
     s.finish(architect)
     s.say("{b|●} Design: two packages share one interface, Track(id, box, score)",
@@ -140,8 +132,8 @@ def develop() -> Scene:
     s.say("{d|>} {p|yes}", hold=0.9)
     s.cut()
     s.say("{b|●} Design approved: two engineers in parallel, each in its own worktree", hold=0.8)
-    core = s.start("engineer", "sonnet", "high", "tracker core: failing test, then code", 2900)
-    writer = s.start("engineer", "sonnet", "high", "writer accepts track ids", 2500)
+    core = s.start("engineer", "sonnet", "high", "tracker core: failing test, then code")
+    writer = s.start("engineer", "sonnet", "high", "writer accepts track ids")
     s.tick(4)
     s.finish(writer)
     s.say("",
@@ -153,7 +145,7 @@ def develop() -> Scene:
     s.tick(1, hold=0.9)
     s.cut()
     s.say("{b|●} Both packages green: reviewer reads the diff against the design", hold=0.8)
-    reviewer = s.start("reviewer", "opus", "high", "review against the design", 3000)
+    reviewer = s.start("reviewer", "opus", "high", "review against the design")
     s.tick(4)
     s.finish(reviewer)
     s.tick(1, hold=0.9)
@@ -188,8 +180,8 @@ def research() -> Scene:
     s.cut()
     s.say("{b|●} Deep-read: one researcher per candidate, sources saved to sources/", hold=0.8)
     names = ("RF-DETR", "D-FINE", "RT-DETRv2")
-    readers = [s.start("researcher", "sonnet", "high", f"{name}: paper, model card, repo", rate)
-               for name, rate in zip(names, (4100, 3600, 3900))]
+    readers = [s.start("researcher", "sonnet", "high", f"{name}: paper, model card, repo")
+               for name in names]
     s.tick(4)
     s.finish(readers[1])
     s.say("",
@@ -202,8 +194,8 @@ def research() -> Scene:
     s.tick(1, hold=0.9)
     s.cut()
     s.say("{b|●} Cross-check: verifiers re-read the sources without the claimed values", hold=0.8)
-    verifiers = [s.start("claim-verifier", "haiku", "medium", f"re-read {name} sources, blind", rate)
-                 for name, rate in zip(names, (1900, 1700, 1800))]
+    verifiers = [s.start("claim-verifier", "haiku", "medium", f"re-read {name} sources, blind")
+                 for name in names]
     s.tick(3)
     s.finish(*verifiers)
     s.tick(1, hold=0.9)

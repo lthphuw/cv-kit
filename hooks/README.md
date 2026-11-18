@@ -29,7 +29,7 @@ call that a `PreToolUse` hook blocked, unless managed settings or a Team or Ente
 
 ## Switching off Claude Code's own attribution
 
-The hook and `rules/commit-vcs.md` stop a trailer in a message the agent writes. Claude Code can also add its own attribution to commits and pull requests. A plugin cannot set that: the plugin documentation says only `agent` and `subagentStatusLine` take effect in a plugin's settings. Set it yourself in your user, project or local settings:
+The hook and `rules/commit-vcs.md` stop a trailer in a message the agent writes. Claude Code can also add its own attribution to commits and pull requests. A plugin cannot set that in its own `settings.json`. Set it yourself in your user, project or local settings:
 
 ```json
 {
@@ -71,42 +71,64 @@ a failing test (the red step) is answered by saying so.
 
 ## Progress and next prompts
 
-Two features show progress without the user asking, and suggest what to type next.
+`concise.md` tells every subagent to start its report with `STATUS: done|blocked|failed — <15 words max>`.
+`progress.md` is added at `SessionStart` only, so subagents pay no tokens for it: when a background agent finishes
+while others run, the main thread prints a `Progress (2/3 done):` block, with no clock, since the agent rows show the
+time. A finished task ends with `Summarization:` (at most 5 bullets) and `Next:` (at most 3 prompts to copy, such as
+`/cv-kit:review the diff against main`). A plugin cannot steer Claude Code's own grey prompt suggestions, so `Next:`
+is plain text in the reply. There is no timer-based heartbeat: the blocks appear on events, and the agent rows cover
+the time in between.
 
-**Live rows.** `settings.json` at the plugin root sets `subagentStatusLine` (a plugin may set only `agent` and
-`subagentStatusLine`). Claude Code runs `agent_status.py` on each refresh tick with the visible subagents as JSON on
-stdin (about every 5 s) and replaces each row with aligned columns, cut to the row width:
+## Agent rows in the status line
+
+Since Claude Code 2.1.323 a plugin cannot restyle the subagent rows under the prompt, and a status line command gets
+no subagent data. So the hooks collect it and your status line draws it, one row per agent:
 
 ```
-◐ claim-verifier (haiku ▰▱▱▱▱)  re-check claims   850  4m12s
-✓ engineer (sonnet ▰▰▱▱▱)       add iou          1.2k
+◓ engineer (sonnet ▰▰▰▱▱)  tracker core: failing test, then code  27s
+✓ explorer (haiku ▰▱▱▱▱)   where frames reach the writer          17s
 ```
 
-Status icon, agent, a group with the model and the effort meter (`low` `▰▱▱▱▱` to `max` `▰▰▰▰▰`; a numeric
-thinking budget shows as `≤8k`), label, tokens, elapsed time. The label is the progress summary Claude Code has, else
-the task description. Columns line up across rows, the label column stops at 48, and a column no row has is dropped.
-The clock shows only while the task runs, because a finished task has no end time. When the row is narrow, parts go
-in this order: the label shrinks to 20, the tokens, the effort meter, the model group, the label shrinks to 6, the
-label; whatever is left is cut with `…`.
+Icon, agent, model and effort meter (`low` `▰▱▱▱▱` to `max` `▰▰▰▰▰`), the task description, and the time: elapsed
+while it runs, the duration once done. `◐◓◑◒` turns on each refresh while the agent runs, `✓` is done, `✗` is a
+failed Agent call; done rows fade, failed rows stay bright. Running rows come first, then the rows that finished
+under your current prompt; past 6 rows a `+N more` line counts the rest. The model is the one the Agent call named,
+else the `model:` of a cv-kit agent. A narrow terminal cuts the description first, then the effort meter, then the
+model. `NO_COLOR=1` turns the colours off.
 
-The icon changes once per refresh tick, the only animation a row can have. Running: `◐◓◑◒` turns a quarter on each
-tick the token count grew, and `○` shows once `tokenSamples` has stood still for three ticks. A task seen to finish
-shows its icon (`✓` completed, `✗` failed, `■` killed) inverted for one tick and bold for the next; then completed and
-killed rows fade, failed rows stay bright. A task first seen already finished does not flash. `○` grey is any other
-status. To tell ticks apart the script keeps the last status, token count, spinner frame and ticks since the status
-changed for each row in `~/.cache/cv-kit/rows/<session_id>.json`; `--register` deletes files there older than a day.
-Without a usable `session_id` the rows still render, with a still spinner and no flash. Colours are ANSI; `NO_COLOR=1`
-turns them off (the spinner still turns). The script uses only the standard library and never fails: on any error it
-prints nothing and the default rows stay. Needs a Claude Code version with `subagentStatusLine` (`agentType` needs 2.1.293).
-The setting is off under `allowManagedHooksOnly`, `disableAllHooks` and an untrusted folder; a user's own
-`subagentStatusLine` overrides the plugin's. `${CLAUDE_PLUGIN_ROOT}` is empty in that command (checked on 2.1.317), so
-`agent_status.py --register` runs at `SessionStart` and writes the plugin root to `~/.cache/cv-kit/plugin-root`, which
-the command reads; the last session to start wins. Without the file the command fails quietly and the default rows show.
+`agent_rows.py --event` runs on `PreToolUse`, `PostToolUse` and `PostToolUseFailure` of the Agent tool and on
+`SubagentStart` and `SubagentStop`, and appends one line per event to `~/.cache/cv-kit/agents/<session_id>.jsonl`.
+The Agent call gives the type, description, model and effort; the start and stop give the clock. A call pairs with
+the next start of its type, and the `agentId` that `PostToolUse` returns corrects the pair when two agents of one
+type start together. At `SessionStart`, `agent_rows.py --register` writes the plugin root to
+`~/.cache/cv-kit/agent-rows-root`, which the status line command reads, and deletes logs older than a day.
 
-**Event summaries and next prompts.** `concise.md` tells every subagent to start its report with
-`STATUS: done|blocked|failed — <15 words max>`. `progress.md` is added at `SessionStart` only, so subagents pay no
-tokens for it: when a background agent finishes while others run, the main thread prints a `Progress (2/3 done):`
-block, with no clock, since the live rows show the time. A finished task ends with `Summarization:` (at most 5
-bullets) and `Next:` (at most 3 prompts to copy, such as `/cv-kit:review the diff against main`). A plugin cannot steer
-Claude Code's own grey prompt suggestions, so `Next:` is plain text in the reply. There is no timer-based heartbeat:
-the blocks appear on events, and the live rows cover the time in between.
+A plugin cannot set `statusLine`, so add it to `~/.claude/settings.json` yourself:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "python3 \"$(cat \"$HOME/.cache/cv-kit/agent-rows-root\" 2>/dev/null)/hooks/agent_rows.py\" 2>/dev/null || true",
+    "refreshInterval": 1
+  }
+}
+```
+
+`refreshInterval` keeps the clocks moving while the main thread waits on background agents; the script reads one
+small file, so once a second is cheap. If you already have a status line, keep it: put its command in place of
+`YOUR_COMMAND` and use the result as `command` (escape the quotes for JSON). Both get the same input, your line
+prints first, and it still prints when cv-kit is not there: `|| true` matters, since a status line that exits
+non-zero goes blank. Your command then also runs every second.
+
+```sh
+in=$(cat); printf '%s' "$in" | { YOUR_COMMAND; }; printf '%s' "$in" | python3 "$(cat "$HOME/.cache/cv-kit/agent-rows-root" 2>/dev/null)/hooks/agent_rows.py" 2>/dev/null || true
+```
+
+Known gaps:
+
+- The rows need one session start with cv-kit 0.10 or later enabled, so the pointer file exists. The last session
+  to start wins.
+- An agent stopped from outside, for example from `/tasks`, may keep a running row: no hook reports it.
+- Hooks are off in an untrusted folder and under `disableAllHooks`, and then no rows appear.
+- Remove the `statusLine` entry before you uninstall cv-kit, or the status line goes blank.

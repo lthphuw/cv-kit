@@ -36,8 +36,8 @@ Name a skill, or describe the work: "NMS crashes on empty input" loads `develop`
 
 ## What you see
 
-Both recordings are scripted examples, not measured results. The agent rows in them are drawn by the plugin's own
-status line, `hooks/agent_status.py`.
+Both recordings are scripted examples, not measured results. The agent rows in them are drawn by the plugin's status
+line script, `hooks/agent_rows.py`, which you turn on with one setting (see Configuration).
 
 ### A develop run
 
@@ -119,11 +119,11 @@ A real report carries the numbers, each with the tag of its claim in `claims.jso
 A claim's verdict is `confirmed`, `differs`, `wrong-paper`, `absent` or `unreachable`. Only a `confirmed` claim is
 cited without the word "unconfirmed", and `scripts/lint_research.py` fails the report otherwise.
 
-### The live rows
+### Agent rows and progress
 
-One row per agent: `icon agent (model effort) task tokens elapsed`, with `◐` running, `○` stalled, `✓` done,
-`✗` failed, `■` killed. When an agent finishes while others still run you get a `Progress` line per agent; a
-finished task ends with `Summarization` and `Next`.
+With the `statusLine` setting from `hooks/README.md`, the status line shows one row per agent:
+`icon agent (model effort) task time`, with `◐` running, `✓` done, `✗` failed. When an agent finishes while others
+still run you get a `Progress` line per agent; a finished task ends with `Summarization` and `Next`.
 
 ## Flows
 
@@ -240,7 +240,7 @@ Draft one with `/cv-kit:develop write the /goal line for the NMS crash`. Templat
 | `concise.py` | session and agent start | short replies; the `Progress`, `Summarization` and `Next` blocks |
 | `block_trailers.py` | before each Bash call | refuses a commit that carries an AI trailer |
 | `evidence_gate.py` | after edits and Bash, at stop | code changed after the last green test: holds the turn, once |
-| `agent_status.py` | status line | the live agent rows |
+| `agent_rows.py` | Agent calls, agent start and stop | logs each agent; your `statusLine` draws one row per agent |
 
 Details and known gaps: `hooks/README.md`.
 
@@ -252,7 +252,7 @@ Details and known gaps: `hooks/README.md`.
 | Models | `model:` in `agents/*.md` | aliases `haiku` `sonnet` `opus`, or a full model ID to pin |
 | Concise mode, Progress, Next | `hooks/hooks.json` | remove the two `concise.py` entries to turn off |
 | Evidence ledger | `~/.cache/cv-kit/gate/` | move with `CV_KIT_GATE_DIR` |
-| Live rows | plugin `settings.json` | your own `subagentStatusLine` wins; `NO_COLOR=1` drops colour |
+| Agent rows | `statusLine` in `~/.claude/settings.json` | a plugin cannot set it: copy the JSON from `hooks/README.md` |
 
 Lint configs tested with ruff 0.17.2, mypy 2.4.0, clang-format and clang-tidy 23.1.3, CMake 4.4, GCC 13.3.
 
@@ -260,8 +260,8 @@ Lint configs tested with ruff 0.17.2, mypy 2.4.0, clang-format and clang-tidy 23
 
 - Evidence gate: a nudge; it cannot tell whether the right tests ran.
 - Commit hook: gaps such as `--amend --no-edit` and `bash -c` (`hooks/README.md`).
-- Live rows: need the SessionStart hook; off in untrusted folders and under `disableAllHooks`.
 - Progress, Summarization, Next: written by the model, which can skip one.
+- Agent rows: you add the `statusLine` setting yourself; an agent stopped from `/tasks` may keep a running row.
 - Catalogue rows marked `UNVERIFIED` are unchecked; licences change.
 - No training, benchmark harness or hardware measurement: you run those.
 - Cost: in the eval run a session with the plugin cost about twice one without. `architect` and the hard rows of

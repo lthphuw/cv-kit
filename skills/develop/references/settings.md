@@ -1,8 +1,7 @@
 # Guard settings for commits
 
-Two settings keep commits under the rules when Claude runs unattended. A plugin cannot set them (only `agent` and
-`subagentStatusLine` take effect in a plugin's `settings.json`), so offer them to the user, show the exact JSON, and
-merge it into the project's `.claude/settings.json` only after a yes. Keep every key the file already has.
+Two settings keep commits under the rules when Claude runs unattended. A plugin cannot set them, so offer them to
+the user, show the exact JSON, and merge it into the project's `.claude/settings.json` only after a yes. Keep every key the file already has.
 
 ```json
 {

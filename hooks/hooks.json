@@ -15,7 +15,7 @@
             "type": "command",
             "command": "python3",
             "args": [
-              "${CLAUDE_PLUGIN_ROOT}/hooks/agent_status.py",
+              "${CLAUDE_PLUGIN_ROOT}/hooks/agent_rows.py",
               "--register"
             ]
           }
@@ -30,6 +30,14 @@
             "command": "python3",
             "args": [
               "${CLAUDE_PLUGIN_ROOT}/hooks/concise.py"
+            ]
+          },
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/agent_rows.py",
+              "--event"
             ]
           }
         ]
@@ -46,6 +54,19 @@
               "${CLAUDE_PLUGIN_ROOT}/hooks/block_trailers.py"
             ],
             "onFailure": "block"
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/agent_rows.py",
+              "--event"
+            ]
           }
         ]
       }
@@ -74,6 +95,19 @@
             ]
           }
         ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/agent_rows.py",
+              "--event"
+            ]
+          }
+        ]
       }
     ],
     "PostToolUseFailure": [
@@ -85,6 +119,19 @@
             "command": "python3",
             "args": [
               "${CLAUDE_PLUGIN_ROOT}/hooks/evidence_gate.py"
+            ]
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/agent_rows.py",
+              "--event"
             ]
           }
         ]
@@ -112,6 +159,18 @@
             "command": "python3",
             "args": [
               "${CLAUDE_PLUGIN_ROOT}/hooks/evidence_gate.py"
+            ]
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/agent_rows.py",
+              "--event"
             ]
           }
         ]
