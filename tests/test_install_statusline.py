@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import shlex
 import stat
 import subprocess
 import sys
@@ -54,9 +55,8 @@ def test_no_status_line_gets_the_launcher_alone(tmp_path):
     assert put(path) == "added"
     launcher, cfg = tmp_path / "home/.claude/cv-kit/statusline.py", inst.config_path(path, tmp_path / "home")
     assert cfg.parent == launcher.parent and cfg.name.startswith("statusline-") and cfg.suffix == ".json"
-    assert load(path) == {"model": "opus", "statusLine": {"type": "command",
-                                                          "command": f"/usr/bin/python3 {launcher} {cfg}",
-                                                          "refreshInterval": 1}}
+    command = f"/usr/bin/python3 {shlex.quote(str(launcher))} {shlex.quote(str(cfg))}"  # this OS's paths, sh quoting
+    assert load(path) == {"model": "opus", "statusLine": {"type": "command", "command": command, "refreshInterval": 1}}
     assert launcher.read_bytes() == LAUNCHER.read_bytes()
     assert config(path) == {"own": None, "shell": ["/bin/sh", "-c"], "ascii": False, "main": True, "before": None}
 
@@ -224,8 +224,9 @@ def test_a_path_with_spaces_is_quoted_for_sh(tmp_path):
     path = settings(tmp_path, {})
     put(path, home=tmp_path / "my home", python="/opt/my python/bin/python3")
     command = load(path)["statusLine"]["command"]
-    cfg = inst.config_path(path, tmp_path / "my home")
-    assert command == f"'/opt/my python/bin/python3' '{tmp_path / 'my home'}/.claude/cv-kit/statusline.py' '{cfg}'"
+    launcher, cfg = tmp_path / "my home/.claude/cv-kit/statusline.py", inst.config_path(path, tmp_path / "my home")
+    assert command == f"'/opt/my python/bin/python3' {shlex.quote(str(launcher))} {shlex.quote(str(cfg))}"
+    assert command.count("'") == 6  # every part has a space, so every part is quoted
 
 
 def test_windows_with_git_bash(tmp_path):
